@@ -1,46 +1,71 @@
-# Getting Started with Create React App
+# AppTicket-React
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Aplicación de gestión de tickets desarrollada con React y Material UI, que se conecta a un backend Flask.
 
-## Available Scripts
+## Características
 
-In the project directory, you can run:
+- **Listado de Tickets**: Visualización de tickets con paginación (50 tickets por página)
+- **Importación de Excel**: Soporte para importar tickets desde archivos Excel/CSV con el formato específico
+- **Kanban**: Vista de tickets organizada por estados
+- **Edición de Tickets**: Formulario para editar los detalles de cada ticket
+- **Monitoreo de Servidores**: Panel para gestionar y monitorear servidores
 
-### `npm start`
+## Estructura de Datos
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+La aplicación está diseñada para trabajar con la siguiente estructura de datos de tickets:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+1. `id`: Identificador único del ticket
+2. `ticket_number`: Número de ticket
+3. `creation_date`: Fecha de creación
+4. `agent`: Agente asignado
+5. `status`: Estado del ticket
+6. `collaborators`: Colaboradores
+7. `first_response`: Primera respuesta
+8. `sla_resolution`: SLA de resolución
+9. `close_date`: Fecha de cierre
+10. `delay`: Demora
+11. `user`: Usuario
+12. `details`: Detalles del ticket
+13. `priority`: Prioridad
+14. `type`: Tipo
+15. `branch`: Sucursal
 
-### `npm test`
+## Importación de Excel
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+El sistema soporta la importación de tickets desde archivos Excel con las siguientes columnas en este orden exacto:
+- Ticket
+- Fecha de creacion
+- Agente
+- Estado
+- Colaboradores
+- Primera Respuesta
+- SLA de Resolucion
+- Fecha de cierre
+- Demora
+- Usuario
 
-### `npm run build`
+## Configuración
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+El frontend se conecta al backend Flask que corre en el puerto 5002. Esta configuración se puede ajustar en el archivo `src/services/api.ts`.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Instalación
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+# Instalar dependencias
+npm install
 
-### `npm run eject`
+# Iniciar la aplicación en modo desarrollo
+npm start
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Construcción para producción
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```bash
+npm run build
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Backend
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+El backend está desarrollado en Flask y debe estar ejecutándose en el puerto 5002 para que la aplicación funcione correctamente.
