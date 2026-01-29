@@ -1,0 +1,63 @@
+<svg width="180" height="42" viewBox="0 0 180 42" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pulseGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="1" stdDeviation="0.5" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Logo posicionado exactamente según guías rojas -->
+  <g transform="translate(24, 21)">
+    <!-- Corazón y pulso - posicionados según la flecha -->
+    <g transform="translate(0, 0)">
+      <!-- Corazón más grande para mejor visibilidad -->
+      <path d="M 0,-3.5 C 0,-4.9 -1.4,-6.3 -3.5,-6.3 C -4.9,-6.3 -6.3,-4.9 -6.3,-3.5 C -6.3,-4.9 -7.7,-6.3 -9.1,-6.3 C -10.5,-6.3 -11.9,-4.9 -11.9,-3.5 C -11.9,0 -6.3,4.2 -6.3,4.2 C -6.3,4.2 0,0 0,-3.5 Z" 
+            fill="url(#heartGradient)" 
+            filter="url(#shadow)"/>
+      
+      <!-- Pulso ECG más prominente -->
+      <path d="M -14,0 L -8.4,0 L -6.3,-4.2 L -4.2,4.2 L -2.1,-2.8 L 0,2.8 L 2.1,0 L 8.4,0" 
+            stroke="url(#pulseGradient)" 
+            stroke-width="1.6" 
+            fill="none" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"/>
+      
+      <!-- Puntos de pulso más visibles -->
+      <circle cx="10.5" cy="0" r="1" fill="#ef4444" opacity="0.8">
+        <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="13.65" cy="0" r="0.8" fill="#3b82f6" opacity="0.6">
+        <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    
+    <!-- Texto posicionado según el cuadro rojo -->
+    <text x="18" y="5" 
+          font-family="Outfit, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+          font-size="19" 
+          font-weight="800" 
+          fill="#ffffff"
+          letter-spacing="-0.5">
+      TicketPulse
+    </text>
+    
+    <!-- Tagline sutil -->
+    <text x="18" y="16" 
+          font-family="Outfit, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+          font-size="5.5" 
+          font-weight="400" 
+          fill="#9ca3af"
+          letter-spacing="0.3">
+      GESTIÓN INTELIGENTE
+    </text>
+  </g>
+</svg>
