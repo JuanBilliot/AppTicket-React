@@ -1690,34 +1690,136 @@ function App() {
       </div>
 
       {/* Header Principal */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div className="brand-icon" style={{ width: '45px', height: '45px', fontSize: '1.2rem', margin: 0 }}>
-              <i className="fas fa-ticket-alt"></i>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '2.5rem',
+          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+          borderRadius: '20px',
+          padding: '2rem',
+          position: 'relative',
+          overflow: 'hidden',
+          backdropFilter: 'blur(10px)'
+        }}>
+          {/* Background decoration */}
+          <div style={{
+            position: 'absolute',
+            top: '-20px',
+            right: '-20px',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
+            borderRadius: '50%'
+          }}></div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', position: 'relative', zIndex: 1 }}>
+            <div className="brand-icon" style={{ 
+              width: '48px', 
+              height: '48px', 
+              fontSize: '1.2rem', 
+              margin: 0,
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #8b5cf6, #8b5cf680)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 25px rgba(139, 92, 246, 0.2)'
+            }}>
+              <i className="fas fa-edit" style={{ color: '#ffffff' }}></i>
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.8rem' }}>
+              <h2 style={{ 
+                margin: 0, 
+                fontSize: '2rem', 
+                fontWeight: '800',
+                color: '#8b5cf6',
+                textShadow: '0 2px 10px rgba(139, 92, 246, 0.3)'
+              }}>
                 <a
                   href={`https://mesadeayuda.sommiercenter.com/requests/show/index/id/${ticket.ticket_number}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="ticket-header-link"
+                  style={{
+                    color: '#8b5cf6',
+                    textDecoration: 'none',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.color = '#7c3aed';
+                    e.target.style.textShadow = '0 0 20px rgba(139, 92, 246, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.color = '#8b5cf6';
+                    e.target.style.textShadow = '0 2px 10px rgba(139, 92, 246, 0.3)';
+                  }}
                 >
                   Ticket #{ticket.ticket_number}
                 </a>
               </h2>
-              <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Gestión y actualización de datos</p>
+              <p style={{ 
+                color: '#94a3b8', 
+                margin: '0.5rem 0 0 0', 
+                fontSize: '1rem',
+                fontWeight: '500',
+                opacity: 0.8
+              }}>Gestión y actualización de datos</p>
             </div>
           </div>
-          <button className="nav-item" onClick={onBack} style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <button 
+            className="nav-item" 
+            onClick={onBack} 
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              color: '#ef4444',
+              borderRadius: '12px',
+              padding: '0.8rem 1.5rem',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              fontWeight: '600',
+              position: 'relative',
+              zIndex: 1,
+              boxShadow: '0 4px 15px rgba(239, 68, 68, 0.1)'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.15))';
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 8px 25px rgba(239, 68, 68, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.1)';
+            }}
+          >
             <i className="fas fa-times"></i> Cancelar
           </button>
         </div>
 
         <form className="edit-form" onSubmit={(e) => { e.preventDefault(); onSave(formData); }}>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Agente Principal</label>
+          <div className="form-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '1.5rem',
+            marginBottom: '2rem'
+          }}>
+            <div className="form-group" style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              transition: 'all 0.3s ease'
+            }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.8rem',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#e2e8f0'
+              }}>Agente Principal</label>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <select
                   name="agent"
@@ -1733,8 +1835,20 @@ function App() {
                 </select>
               </div>
             </div>
-            <div className="form-group">
-              <label>Estado</label>
+            <div className="form-group" style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              transition: 'all 0.3s ease'
+            }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.8rem',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#e2e8f0'
+              }}>Estado</label>
               <select name="status" value={formData.status || ''} onChange={handleChange} className="custom-input">
                 <option value="Abierto">Abierto</option>
                 <option value="Cerrado">Cerrado</option>
@@ -1744,8 +1858,20 @@ function App() {
                 <option value="Pendiente">Pendiente</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Usuario</label>
+            <div className="form-group" style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              transition: 'all 0.3s ease'
+            }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.8rem',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#e2e8f0'
+              }}>Usuario</label>
               <select 
                 name="user" 
                 value={formData.user || ''} 
@@ -1758,8 +1884,20 @@ function App() {
                 <option value="new">+ Agregar Nuevo...</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Sucursal</label>
+            <div className="form-group" style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              transition: 'all 0.3s ease'
+            }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.8rem',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#e2e8f0'
+              }}>Sucursal</label>
               <select name="branch" value={formData.branch || ''} onChange={handleChange} className="custom-input">
                 <option value="">-- Seleccionar Sucursal --</option>
                 {branches.map(b => <option key={b} value={b}>{b}</option>)}
@@ -1814,23 +1952,60 @@ function App() {
                 </div>
               )}
             </div>
-            <div className="form-group">
-              <label>SLA de Resolución</label>
+            <div className="form-group" style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              transition: 'all 0.3s ease'
+            }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.8rem',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#e2e8f0'
+              }}>SLA de Resolución</label>
               <select name="sla_resolution" value={formData.sla_resolution || ''} onChange={handleChange} className="custom-input">
                 <option value="Correcto">Correcto</option>
                 <option value="Excedido">Excedido</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Fecha de Cierre</label>
+            <div className="form-group" style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              transition: 'all 0.3s ease'
+            }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.8rem',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#e2e8f0'
+              }}>Fecha de Cierre</label>
               <DatePicker
                 value={formData.close_date === 'None' ? '' : (formData.close_date || '')}
                 onChange={(value) => setFormData(prev => ({ ...prev, close_date: value }))}
                 placeholder="Seleccionar fecha de cierre"
               />
             </div>
-            <div className="form-group full-width">
-              <label>Colaboradores</label>
+            <div className="form-group" style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              transition: 'all 0.3s ease',
+              gridColumn: 'span 3'
+            }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.8rem',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#e2e8f0'
+              }}>Colaboradores</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <select
@@ -1866,8 +2041,21 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="form-group full-width">
-              <label>Detalles / Notas</label>
+            <div className="form-group" style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              transition: 'all 0.3s ease',
+              gridColumn: 'span 3'
+            }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.8rem',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#e2e8f0'
+              }}>Detalles / Notas</label>
               <textarea 
                 name="details" 
                 value={formData.details || ''} 
@@ -1880,7 +2068,31 @@ function App() {
           </div>
 
           <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="nav-item" style={{ background: 'var(--success)', color: 'white', padding: '1rem 3rem' }}>
+            <button 
+              type="submit" 
+              className="nav-item" 
+              style={{ 
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))',
+                border: '1px solid rgba(34, 197, 94, 0.2)',
+                color: '#22c55e',
+                borderRadius: '12px',
+                padding: '1rem 3rem',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.15))';
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(34, 197, 94, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 15px rgba(34, 197, 94, 0.1)';
+              }}
+            >
               <i className="fas fa-save"></i> Guardar Cambios
             </button>
           </div>
