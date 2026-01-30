@@ -3,6 +3,230 @@ import './App.css'
 
 const API_BASE = 'http://127.0.0.1:5002';
 
+// Sistema SLA Inteligente y Adaptativo
+const slaCategories = {
+  'urgente': {
+    maxHours: 2,
+    maxDays: 0,
+    color: '#ef4444',
+    description: 'Crítico - Resolución inmediata',
+    examples: 'Remoto no funciona, sistema caído, pérdida total de servicio'
+  },
+  'normal': {
+    maxHours: 0,
+    maxDays: 3,
+    color: '#f59e0b',
+    description: 'Estándar - Resolución normal',
+    examples: 'Cambios de equipo, configuraciones, instalación de software'
+  },
+  'complejo': {
+    maxHours: 0,
+    maxDays: 10,
+    color: '#8b5cf6',
+    description: 'Complejo - Requiere planificación',
+    examples: 'Compras grandes, proyectos especiales, infraestructura'
+  },
+  'bajo': {
+    maxHours: 0,
+    maxDays: 7,
+    color: '#10b981',
+    description: 'Baja prioridad - Sin urgencia',
+    examples: 'Consultas, mejoras menores, solicitudes de información'
+  }
+};
+
+// Función para convertir fecha argentina a formato JavaScript
+const parseArgentineDate = (dateString) => {
+  if (!dateString || dateString.trim() === '') {
+    return null;
+  }
+  
+  try {
+    // Si ya está en formato ISO, devolverla directamente
+    if (dateString.includes('T') || dateString.includes('-')) {
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? null : date;
+    }
+    
+    // Formato argentino: dd/mm/yyyy
+    const parts = dateString.trim().split('/');
+    if (parts.length !== 3) {
+      return null;
+    }
+    
+    const [day, month, year] = parts;
+    
+    // Validar que sean números
+    if (isNaN(day) || isNaN(month) || isNaN(year)) {
+      return null;
+    }
+    
+    // Crear fecha en formato YYYY-MM-DD
+    const isoString = `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const date = new Date(isoString);
+    
+    return isNaN(date.getTime()) ? null : date;
+  } catch (error) {
+    return null;
+  }
+};
+
+// Función para calcular SLA automáticamente
+const calculateSLA = (creationDate, closeDate, ticketType = 'normal') => {
+  if (!creationDate) return { status: 'unknown', days: 0, hours: 0, percentage: 0 };
+  
+  const sla = slaCategories[ticketType] || slaCategories['normal'];
+  
+  try {
+    // Convertir fechas argentinas
+    const creation = parseArgentineDate(creationDate);
+    const close = closeDate ? parseArgentineDate(closeDate) : new Date();
+    
+    // Validar fechas
+    if (!creation || !close) {
+      return { status: 'unknown', days: 0, hours: 0, percentage: 0 };
+    }
+    
+    // Calcular diferencia en milisegundos
+    const diffMs = close - creation;
+    
+    // Si la diferencia es negativa, usar 0
+    const diffMsPositive = Math.max(0, diffMs);
+    
+    // Calcular diferencia en horas y días
+    const diffHours = Math.floor(diffMsPositive / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    const remainingHours = diffHours % 24;
+    
+    // Calcular tiempo máximo permitido en horas
+    const maxAllowedHours = (sla.maxDays * 24) + sla.maxHours;
+    
+    // Calcular porcentaje de SLA utilizado
+    const percentage = maxAllowedHours > 0 ? Math.min(100, (diffHours / maxAllowedHours) * 100) : 0;
+    
+    // Determinar estado
+    let status;
+    if (percentage > 100) {
+      status = 'exceeded'; // Excedido
+    } else if (percentage > 80) {
+      status = 'warning';  // Advertencia
+    } else if (percentage > 50) {
+      status = 'moderate'; // Moderado
+    } else {
+      status = 'good';     // Bueno
+    }
+    
+    return {
+      status,
+      days: diffDays,
+      hours: remainingHours,
+      percentage: Math.round(percentage),
+      slaCategory: sla,
+      maxAllowedHours,
+      actualHours: diffHours
+    };
+  } catch (error) {
+    console.error('❌ Error calculating SLA:', error);
+    return { status: 'unknown', days: 0, hours: 0, percentage: 0 };
+  }
+};
+
+// Función para determinar tipo de ticket basado en contenido
+const determineTicketType = (details, type = '') => {
+  const detailsLower = (details || '').toLowerCase();
+  const typeLower = (type || '').toLowerCase();
+  
+  // Palabras clave para cada categoría
+  const urgentKeywords = ['no funciona', 'caído', 'no abre', 'error crítico', 'urgente', 'remoto', 'acceso', 'bloqueado', 'pérdida'];
+  const complexKeywords = ['comprar', 'adquirir', 'proyecto', 'infraestructura', 'migración', 'implementación', 'servidor nuevo'];
+  const lowKeywords = ['consulta', 'duda', 'información', 'mejora', 'sugerencia', 'recomendación'];
+  
+  // Detectar palabras clave urgentes
+  if (urgentKeywords.some(keyword => detailsLower.includes(keyword) || typeLower.includes(keyword))) {
+    return 'urgente';
+  }
+  
+  // Detectar palabras clave complejas
+  if (complexKeywords.some(keyword => detailsLower.includes(keyword) || typeLower.includes(keyword))) {
+    return 'complejo';
+  }
+  
+  // Detectar palabras clave baja prioridad
+  if (lowKeywords.some(keyword => detailsLower.includes(keyword) || typeLower.includes(keyword))) {
+    return 'bajo';
+  }
+  
+  // Por defecto, normal
+  return 'normal';
+};
+
+// Componente para mostrar SLA visualmente (versión optimizada)
+const SLAIndicator = ({ creationDate, closeDate, details, type }) => {
+  const ticketType = determineTicketType(details, type);
+  const sla = calculateSLA(creationDate, closeDate, ticketType);
+  
+  // Colores dinámicos según porcentaje de SLA (rangos más específicos)
+  const getDynamicColor = () => {
+    const percentage = sla.percentage;
+    
+    // Colores graduales por rango de porcentaje (umbral del 95% para rojo)
+    if (percentage > 100) return '#dc2626';      // Rojo intenso - Claramente vencido (>100%)
+    if (percentage > 95) return '#f97316';      // Naranja rojizo - Vencido (96-100%)
+    if (percentage > 90) return '#f59e0b';        // Naranja - Justo a tiempo (91-95%)
+    if (percentage > 75) return '#fbbf24';        // Naranja claro - Preocupante (76-90%)
+    if (percentage > 50) return '#fde047';        // Amarillo - Advertencia (51-75%)
+    if (percentage > 25) return '#fde68a';        // Amarillo verdoso - Regular (26-50%)
+    if (percentage > 10) return '#fde047';        // Amarillo - Bueno (11-25%)
+    
+    // Colores según tipo de ticket cuando está bien (≤10%)
+    if (ticketType === 'urgente') return '#059669';     // Verde intenso
+    if (ticketType === 'normal') return '#10b981';     // Verde estándar
+    if (ticketType === 'complejo') return '#7c3aed';   // Púrpura
+    if (ticketType === 'bajo') return '#0891b2';       // Azul
+    
+    return '#10b981'; // Verde por defecto
+  };
+  
+  const dynamicColor = getDynamicColor();
+  
+  // Determinar texto del estado
+  const getStatusText = () => {
+    if (sla.percentage > 120) return 'CRÍTICO';
+    if (sla.percentage > 100) return 'VENCIDO';
+    if (sla.percentage > 90) return 'JUSTO A TIEMPO';
+    if (sla.percentage > 70) return 'OK';
+    return 'OK';
+  };
+  
+  // Manejar valores NaN
+  const displayDays = isNaN(sla.days) || sla.days < 0 ? 0 : sla.days;
+  const displayHours = isNaN(sla.hours) || sla.hours < 0 ? 0 : sla.hours;
+  const displayPercentage = isNaN(sla.percentage) ? 0 : sla.percentage;
+  
+  return (
+    <span 
+      className={`sla-badge sla-${sla.status}`}
+      style={{ 
+        background: `${dynamicColor}20`,
+        color: dynamicColor,
+        border: `1px solid ${dynamicColor}40`,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '6px 12px',
+        borderRadius: '20px',
+        fontSize: '0.75rem',
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px'
+      }}
+    >
+      <i className="fas fa-percentage" style={{ fontSize: '0.6rem' }}></i>
+      {displayPercentage}% ({getStatusText()})
+    </span>
+  );
+};
+
 // DatePicker Component
 const DatePicker = ({ value, onChange, placeholder = "Seleccionar fecha" }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -2239,8 +2463,22 @@ function App() {
             </div>
             <div className="stat-card sla">
               <div className="stat-content">
-                <div className="stat-number">85%</div>
-                <div className="stat-label">SLA Primera Respuesta</div>
+                <div className="stat-number">
+                  {(() => {
+                    const tickets = currentTickets || [];
+                    const slaResults = tickets.map(ticket => {
+                      const ticketType = determineTicketType(ticket.details, ticket.type);
+                      return calculateSLA(ticket.creation_date, ticket.close_date, ticketType);
+                    });
+                    
+                    const goodSLA = slaResults.filter(sla => sla.percentage <= 90).length;
+                    const totalSLA = slaResults.filter(sla => sla.status !== 'unknown').length;
+                    const percentage = totalSLA > 0 ? Math.round((goodSLA / totalSLA) * 100) : 0;
+                    
+                    return `${percentage}%`;
+                  })()}
+                </div>
+                <div className="stat-label">SLA Cumplido</div>
               </div>
             </div>
             <div className="stat-card closed">
@@ -2249,6 +2487,90 @@ function App() {
                 <div className="stat-label">Cerrados</div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* SLA Analysis Section - Compact */}
+        <div className="sla-analysis-section" style={{ 
+          marginBottom: '1.5rem',
+          background: 'rgba(255,255,255,0.02)',
+          borderRadius: '12px',
+          padding: '1rem',
+          border: '1px solid var(--glass-border)'
+        }}>
+          <h3 style={{ 
+            marginBottom: '0.8rem', 
+            fontSize: '1.1rem',
+            fontWeight: '600',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <i className="fas fa-chart-line" style={{ color: '#8b5cf6' }}></i>
+            Análisis SLA
+          </h3>
+          
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+            gap: '0.8rem'
+          }}>
+            {Object.entries(slaCategories).map(([key, category]) => {
+              const tickets = currentTickets || [];
+              const categoryTickets = tickets.filter(ticket => {
+                const ticketType = determineTicketType(ticket.details, ticket.type);
+                return ticketType === key;
+              });
+              
+              const slaResults = categoryTickets.map(ticket => {
+                return calculateSLA(ticket.creation_date, ticket.close_date, key);
+              });
+              
+              const goodSLA = slaResults.filter(sla => sla.percentage <= 90).length;
+              const warningSLA = slaResults.filter(sla => sla.percentage > 90 && sla.percentage <= 100).length;
+              const exceededSLA = slaResults.filter(sla => sla.percentage > 100).length;
+              const total = slaResults.length;
+              
+              // Calcular porcentaje promedio de cumplimiento
+              const avgCompliance = total > 0 ? 
+                Math.round(slaResults.reduce((sum, sla) => sum + (100 - Math.min(sla.percentage, 100)), 0) / total) : 0;
+              
+              return (
+                <div key={key} style={{
+                  background: `${category.color}08`,
+                  border: `1px solid ${category.color}20`,
+                  borderRadius: '8px',
+                  padding: '0.8rem'
+                }}>
+                  <div style={{ 
+                    color: category.color, 
+                    fontWeight: '600',
+                    marginBottom: '0.3rem',
+                    fontSize: '0.85rem'
+                  }}>
+                    {category.description.split(' - ')[0]}
+                  </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    fontSize: '0.75rem',
+                    marginBottom: '0.3rem'
+                  }}>
+                    <span style={{ color: '#10b981' }}>✅ {goodSLA}</span>
+                    <span style={{ color: '#f59e0b' }}>⚠️ {warningSLA}</span>
+                    <span style={{ color: '#ef4444' }}>❌ {exceededSLA}</span>
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.7rem', 
+                    color: '#6b7280',
+                    fontWeight: '500'
+                  }}>
+                    Total: {total} • Cumplimiento: {avgCompliance}%
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -3146,7 +3468,7 @@ function App() {
                     <th>Usuario / Sucursal</th>
                     <th>Estado</th>
                     <th>Agente / Colaboradores</th>
-                    <th>SLA / 1º Rpta</th>
+                    <th>SLA</th>
                     <th>Demora</th>
                     <th>Acciones</th>
                   </tr>
@@ -3209,22 +3531,12 @@ function App() {
                         </div>
                       </td>
                       <td>
-                        <span className={`sla-badge sla-${ticket.sla_resolution?.toLowerCase().replace(' ', '-')}`} 
-                              style={{ 
-                                background: `${getSLAColor(ticket.sla_resolution)}20`,
-                                color: getSLAColor(ticket.sla_resolution),
-                                border: `1px solid ${getSLAColor(ticket.sla_resolution)}40`,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                borderRadius: '12px',
-                                fontSize: '0.75rem',
-                                fontWeight: '500'
-                              }}>
-                          <i className="fas fa-clock" style={{ fontSize: '0.7rem' }}></i>
-                          {ticket.sla_resolution || 'Sin SLA'}
-                        </span>
+                        <SLAIndicator 
+                          creationDate={ticket.creation_date}
+                          closeDate={ticket.close_date}
+                          details={ticket.details}
+                          type={ticket.type}
+                        />
                       </td>
                       <td>
                         <span className={`delay-badge delay-${getDelayClass(ticket.delay)}`}
