@@ -620,6 +620,44 @@ function App() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [showAddServerModal, setShowAddServerModal] = useState(false);
   const [showEditServerModal, setShowEditServerModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedTicketForModal, setSelectedTicketForModal] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Función de filtrado para tickets
+  const filteredTickets = tickets.filter(ticket => {
+    if (!searchTerm || searchTerm.trim() === '') return true;
+    
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    // Buscar en número de ticket (con seguridad para null/undefined)
+    if (ticket.ticket_number != null && ticket.ticket_number.toString().includes(searchLower)) return true;
+    
+    // Buscar en usuario (con seguridad para null/undefined)
+    if (ticket.user && ticket.user.toLowerCase().includes(searchLower)) return true;
+    
+    // Buscar en sucursal (con seguridad para null/undefined)
+    if (ticket.branch && ticket.branch.toLowerCase().includes(searchLower)) return true;
+    
+    // Buscar en agente (con seguridad para null/undefined)
+    if (ticket.agent && ticket.agent.toLowerCase().includes(searchLower)) return true;
+    
+    // Buscar en colaboradores (con seguridad para null/undefined)
+    if (ticket.collaborators && ticket.collaborators.toLowerCase().includes(searchLower)) return true;
+    
+    // Buscar en detalles (con seguridad para null/undefined)
+    if (ticket.details && ticket.details.toLowerCase().includes(searchLower)) return true;
+    
+    // Buscar en estado (con seguridad para null/undefined)
+    if (ticket.status && ticket.status.toLowerCase().includes(searchLower)) return true;
+    
+    return false;
+  });
+
+  // Resetear página cuando cambia el término de búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
   const [editingServer, setEditingServer] = useState(null);
   const [newServerData, setNewServerData] = useState({
     branch: '', branch_code: '', primary_service_provider: '',
@@ -1436,8 +1474,8 @@ function App() {
   // Lógica de Paginación
   const indexOfLastTicket = currentPage * ticketsPerPage;
   const indexOfFirstTicket = indexOfLastTicket - ticketsPerPage;
-  const currentTickets = tickets.slice(indexOfFirstTicket, indexOfLastTicket);
-  const totalPages = Math.ceil(tickets.length / ticketsPerPage);
+  const currentTickets = filteredTickets.slice(indexOfFirstTicket, indexOfLastTicket);
+  const totalPages = Math.ceil(filteredTickets.length / ticketsPerPage);
 
   const Pagination = () => (
     totalPages > 1 ? (
@@ -1467,103 +1505,307 @@ function App() {
     ) : null
   );
 
-  const TicketDetailView = ({ ticket, onEdit, onBack }) => (
-    <div className="panel animate-fade-in" style={{ padding: '2.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-        <button className="nav-item" onClick={onBack} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.6rem 1.2rem' }}>
-          <i className="fas fa-arrow-left"></i> Volver al listado
-        </button>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="nav-item" onClick={onEdit} style={{ background: 'var(--primary)', color: 'white' }}>
-            <i className="fas fa-edit"></i> Editar Ticket
-          </button>
-        </div>
-      </div>
+  // Modal de detalles básicos
+  const TicketDetailModal = ({ ticket, onClose }) => {
+    if (!ticket) return null;
 
-      <div className="detail-grid">
-        <div className="detail-card main-info">
-          <div className="detail-header">
-            <span className="ticket-number">
-              <a
-                href={`https://mesadeayuda.sommiercenter.com/requests/show/index/id/${ticket.ticket_number}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ticket-header-link"
-                style={{ fontSize: 'inherit' }}
-              >
-                Ticket #{ticket.ticket_number}
-              </a>
-            </span>
-            <span className={`badge status-${(ticket.status || '').trim().toLowerCase().replace(/\s+/g, '-')}`}>{ticket.status}</span>
-          </div>
-
-          <div className="info-section">
-            <div className="info-item">
-              <label>Usuario</label>
-              <span>{ticket.user || 'S/U'}</span>
-            </div>
-            <div className="info-item">
-              <label>Sucursal</label>
-              <span>{ticket.branch || 'S/D'}</span>
-            </div>
-          </div>
-
-          <div className="info-section" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
-            <div className="info-item">
-              <label>Creado</label>
-              <span>{ticket.creation_date}</span>
-            </div>
-            <div className="info-item">
-              <label>Cierre</label>
-              <span>{ticket.close_date || 'En proceso'}</span>
-            </div>
-            <div className="info-item">
-              <label>Demora</label>
-              <span style={{ color: 'var(--warning)', fontWeight: 700 }}>{ticket.delay}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="detail-card side-info">
-          <h3><i className="fas fa-user-shield"></i> Asignación</h3>
-          <div className="info-item">
-            <label>Agente Principal</label>
-            <span>{ticket.agent || 'Sin asignar'}</span>
-          </div>
-          <div className="info-item">
-            <label>Colaboradores</label>
-            <span>{ticket.collaborators || 'Ninguno'}</span>
-          </div>
-
-          <h3 style={{ marginTop: '2rem' }}><i className="fas fa-tachometer-alt"></i> Rendimiento SLA</h3>
-          <div className="info-item">
-            <label>Estado SLA</label>
-            <span className={`sla-badge ${ticket.sla_resolution?.toLowerCase() === 'correcto' ? 'sla-ok' : 'sla-warn'}`}>
-              {ticket.sla_resolution || 'N/A'}
-            </span>
-          </div>
-          <div className="info-item">
-            <label>Primera Respuesta</label>
-            <span>{ticket.first_response || '--'}</span>
-          </div>
-        </div>
-
-        <div className="detail-card full-width">
-          <h3><i className="fas fa-align-left"></i> Detalles / Notas</h3>
-          <p style={{ 
-            lineHeight: '1.6', 
-            color: ticket.details ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)', 
-            fontStyle: ticket.details ? 'normal' : 'italic',
-            background: 'rgba(0,0,0,0.2)', 
-            padding: '1.5rem', 
-            borderRadius: '12px' 
+    return (
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(5px)'
+        }}
+        onClick={onClose} // Cerrar al hacer clic en el backdrop
+      >
+        <div 
+          style={{
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            width: '90%',
+            maxWidth: '550px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(20px)'
+          }}
+          onClick={(e) => e.stopPropagation()} // Evitar que se cierre al hacer clic dentro del modal
+        >
+          {/* Header */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1rem',
+            paddingBottom: '0.8rem',
+            borderBottom: '1px solid rgba(148, 163, 184, 0.2)'
           }}>
-            {ticket.details || 'Sin detalle...'}
-          </p>
+            <h3 style={{
+              margin: 0,
+              fontSize: '1.3rem',
+              fontWeight: '700',
+              color: '#f1f5f9',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <i className="fas fa-ticket-alt" style={{ color: '#3b82f6' }}></i>
+              Detalle del Ticket
+            </h3>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#f87171',
+                borderRadius: '8px',
+                padding: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+              }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+
+          {/* Contenido */}
+          <div style={{ color: '#e2e8f0' }}>
+            {/* Número de ticket */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.3rem', 
+                fontSize: '0.85rem', 
+                color: '#94a3b8',
+                fontWeight: '600'
+              }}>
+                Número de Ticket
+              </label>
+              <div style={{
+                fontSize: '1.1rem',
+                fontWeight: '700',
+                color: '#3b82f6',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <a
+                  href={`https://mesadeayuda.sommiercenter.com/requests/show/index/id/${ticket.ticket_number}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: '#3b82f6',
+                    textDecoration: 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.color = '#60a5fa';
+                    e.target.style.textDecoration = 'underline';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.color = '#3b82f6';
+                    e.target.style.textDecoration = 'none';
+                  }}
+                >
+                  #{ticket.ticket_number}
+                </a>
+                <i className="fas fa-external-link-alt" style={{ fontSize: '0.7rem' }}></i>
+              </div>
+            </div>
+
+            {/* Estado */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.3rem', 
+                fontSize: '0.85rem', 
+                color: '#94a3b8',
+                fontWeight: '600'
+              }}>
+                Estado
+              </label>
+              <span className={`badge status-${(ticket.status || '').trim().toLowerCase().replace(/\s+/g, '-')}`}>
+                {ticket.status}
+              </span>
+            </div>
+
+            {/* Información básica en grid */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.3rem', 
+                  fontSize: '0.85rem', 
+                  color: '#94a3b8',
+                  fontWeight: '600'
+                }}>
+                  Usuario
+                </label>
+                <div style={{ fontSize: '0.9rem', color: '#f1f5f9' }}>
+                  {ticket.user || 'S/U'}
+                </div>
+              </div>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.3rem', 
+                  fontSize: '0.85rem', 
+                  color: '#94a3b8',
+                  fontWeight: '600'
+                }}>
+                  Sucursal
+                </label>
+                <div style={{ fontSize: '0.9rem', color: '#f1f5f9' }}>
+                  {ticket.branch || 'S/D'}
+                </div>
+              </div>
+            </div>
+
+            {/* Fechas */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.3rem', 
+                  fontSize: '0.85rem', 
+                  color: '#94a3b8',
+                  fontWeight: '600'
+                }}>
+                  Creado
+                </label>
+                <div style={{ fontSize: '0.9rem', color: '#f1f5f9' }}>
+                  {ticket.creation_date}
+                </div>
+              </div>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.3rem', 
+                  fontSize: '0.85rem', 
+                  color: '#94a3b8',
+                  fontWeight: '600'
+                }}>
+                  Cierre
+                </label>
+                <div style={{ fontSize: '0.9rem', color: '#f1f5f9' }}>
+                  {ticket.close_date || 'En proceso'}
+                </div>
+              </div>
+            </div>
+
+            {/* Demora */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.3rem', 
+                fontSize: '0.85rem', 
+                color: '#94a3b8',
+                fontWeight: '600'
+              }}>
+                Demora
+              </label>
+              <div style={{ 
+                fontSize: '0.9rem', 
+                color: '#fbbf24', 
+                fontWeight: '700' 
+              }}>
+                {ticket.delay}
+              </div>
+            </div>
+
+            {/* Asignación */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.3rem', 
+                fontSize: '0.85rem', 
+                color: '#94a3b8',
+                fontWeight: '600'
+              }}>
+                Asignación
+              </label>
+              <div style={{ fontSize: '0.9rem', color: '#f1f5f9' }}>
+                <div style={{ marginBottom: '0.3rem' }}>
+                  <strong>Agente:</strong> {ticket.agent || 'Sin asignar'}
+                </div>
+                <div>
+                  <strong>Colaboradores:</strong> {ticket.collaborators || 'Ninguno'}
+                </div>
+              </div>
+            </div>
+
+            {/* SLA */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.3rem', 
+                fontSize: '0.85rem', 
+                color: '#94a3b8',
+                fontWeight: '600'
+              }}>
+                Estado SLA
+              </label>
+              <span className={`sla-badge ${ticket.sla_resolution?.toLowerCase() === 'correcto' ? 'sla-ok' : 'sla-warn'}`}>
+                {ticket.sla_resolution || 'N/A'}
+              </span>
+            </div>
+
+            {/* Detalles */}
+            <div>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.3rem', 
+                fontSize: '0.85rem', 
+                color: '#94a3b8',
+                fontWeight: '600'
+              }}>
+                Detalles / Notas
+              </label>
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                padding: '0.8rem',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                lineHeight: '1.4',
+                color: ticket.details ? '#e2e8f0' : '#94a3b8',
+                fontStyle: ticket.details ? 'normal' : 'italic',
+                maxHeight: '120px',
+                overflow: 'auto'
+              }}>
+                {ticket.details || 'Sin detalle...'}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const TicketEditView = ({ ticket, onSave, onBack }) => {
     const [formData, setFormData] = useState({ 
@@ -5036,9 +5278,6 @@ function App() {
           </div>
         );
       case 'tickets':
-        if (viewMode === 'view' && selectedTicket) {
-          return <TicketDetailView ticket={selectedTicket} onEdit={() => setViewMode('edit')} onBack={() => { setViewMode('list'); setSelectedTicket(null); }} />;
-        }
         if (viewMode === 'edit' && selectedTicket) {
           return <TicketEditView ticket={selectedTicket} onSave={handleSaveTicket} onBack={() => { setViewMode('list'); setSelectedTicket(null); }} />;
         }
@@ -5046,55 +5285,127 @@ function App() {
           return <TicketCreateView onSuccess={() => {
             setViewMode('list');
             fetchTickets();
-          }} />;
+          }} onBack={() => setViewMode('list')} />;
         }
         return (
-          <div className="panel" style={{ padding: '2rem' }}>
-            <div className="panel-header" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: '800' }}>Gestión de Tickets</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                  Mostrando {tickets.length > 0 ? indexOfFirstTicket + 1 : 0} - {Math.min(indexOfLastTicket, tickets.length)} de {tickets.length} tickets
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setViewMode('create');
-                    setSelectedTicket(null);
-                  }}
-                  style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '20px',
-                    padding: '10px 20px',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-                  }}
-                >
-                  <i className="fas fa-plus-circle"></i>
-                  Crear Ticket
-                </button>
-                
-                <div className="user-profile">
-                  <span style={{ fontWeight: 600 }}>Juan Billiot</span>
-                  <div className="avatar">JB</div>
+          <div>
+            <TicketDetailModal 
+              ticket={selectedTicketForModal} 
+              onClose={() => { setShowDetailModal(false); setSelectedTicketForModal(null); }} 
+            />
+            <div className="panel" style={{ padding: '2rem' }}>
+              <div className="panel-header" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: '800' }}>Gestión de Tickets</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    Mostrando {filteredTickets.length > 0 ? indexOfFirstTicket + 1 : 0} - {Math.min(indexOfLastTicket, filteredTickets.length)} de {filteredTickets.length} tickets
+                    {searchTerm && ` (filtrando: "${searchTerm}")`}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                  {/* Buscador */}
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      placeholder="🔍 Buscar tickets..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '25px',
+                        padding: '10px 15px 10px 40px',
+                        fontSize: '0.9rem',
+                        color: '#ffffff',
+                        width: '300px',
+                        outline: 'none',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                    <i 
+                      className="fas fa-search" 
+                      style={{
+                        position: 'absolute',
+                        left: '15px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        fontSize: '0.9rem'
+                      }}
+                    ></i>
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'rgba(239, 68, 68, 0.2)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: '#f87171',
+                          borderRadius: '50%',
+                          width: '20px',
+                          height: '20px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.7rem'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setViewMode('create');
+                      setSelectedTicket(null);
+                    }}
+                    style={{
+                      background: 'var(--primary)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '20px',
+                      padding: '10px 20px',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                    }}
+                  >
+                    <i className="fas fa-plus-circle"></i>
+                    Crear Ticket
+                  </button>
                 </div>
               </div>
             </div>
@@ -5209,7 +5520,7 @@ function App() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          <button className="action-btn view" title="Ver Detalles" onClick={() => { setSelectedTicket(ticket); setViewMode('view'); }}><i className="fas fa-eye"></i></button>
+                          <button className="action-btn view" title="Ver Detalles" onClick={() => { setSelectedTicketForModal(ticket); setShowDetailModal(true); }}><i className="fas fa-eye"></i></button>
                           <button className="action-btn edit" title="Editar" onClick={() => { setSelectedTicket(ticket); setViewMode('edit'); }}><i className="fas fa-edit"></i></button>
                         </div>
                       </td>
@@ -5522,7 +5833,8 @@ function App() {
             </div>
             
             <div className="user-profile">
-              <span style={{ fontWeight: 600 }}>{new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+              <span style={{ fontWeight: 600 }}>Juan Billiot</span>
+              <div className="avatar">JB</div>
             </div>
           </div>
         </header>
