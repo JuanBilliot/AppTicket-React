@@ -2238,3 +2238,93 @@ select.custom-input option {
     padding: 1.5rem;
   }
 }
+
+/* SLA Analysis Animations - REALES */
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 0.6; 
+    transform: scale(1); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.1); 
+  }
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px); 
+  }
+  50% { 
+    transform: translateY(-5px); 
+  }
+}
+
+@keyframes glow {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); 
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); 
+  }
+}
+
+@keyframes rotate {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+@keyframes shimmer {
+  0% { 
+    background-position: -200px 0; 
+  }
+  100% { 
+    background-position: calc(200px + 100%) 0; 
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% { 
+    transform: translate3d(0,0,0); 
+  }
+  40%, 43% { 
+    transform: translate3d(0, -10px, 0); 
+  }
+  70% { 
+    transform: translate3d(0, -5px, 0); 
+  }
+  90% { 
+    transform: translate3d(0, -2px, 0); 
+  }
+}
+
+/* Aplicar animaciones a elementos específicos */
+.sla-particle {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.sla-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.sla-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.sla-rotate {
+  animation: rotate 4s linear infinite;
+}
+
+.sla-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 200px 100%;
+  animation: shimmer 2s infinite;
+}
+
+.sla-bounce {
+  animation: bounce 2s infinite;
+}

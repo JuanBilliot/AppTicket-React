@@ -165,20 +165,20 @@ const SLAIndicator = ({ creationDate, closeDate, details, type }) => {
   const ticketType = determineTicketType(details, type);
   const sla = calculateSLA(creationDate, closeDate, ticketType);
   
-  // Colores dinámicos según porcentaje de SLA (rangos más específicos)
+  // Colores dinámicos según porcentaje de SLA (rangos específicos con descripciones)
   const getDynamicColor = () => {
     const percentage = sla.percentage;
     
-    // Colores graduales por rango de porcentaje (umbral del 95% para rojo)
-    if (percentage > 100) return '#dc2626';      // Rojo intenso - Claramente vencido (>100%)
-    if (percentage > 95) return '#f97316';      // Naranja rojizo - Vencido (96-100%)
-    if (percentage > 90) return '#f59e0b';        // Naranja - Justo a tiempo (91-95%)
-    if (percentage > 75) return '#fbbf24';        // Naranja claro - Preocupante (76-90%)
-    if (percentage > 50) return '#fde047';        // Amarillo - Advertencia (51-75%)
-    if (percentage > 25) return '#fde68a';        // Amarillo verdoso - Regular (26-50%)
-    if (percentage > 10) return '#fde047';        // Amarillo - Bueno (11-25%)
+    // Colores graduales por rango de porcentaje (coincidentes con descripciones)
+    if (percentage > 95) return '#dc2626';      // Rojo intenso - Vencido (>95%)
+    if (percentage > 90) return '#f97316';      // Naranja rojizo - Justo a Tiempo (91-95%)
+    if (percentage > 75) return '#fbbf24';      // Naranja claro - Preocupante (76-90%)
+    if (percentage > 50) return '#fde047';      // Amarillo - Advertencia (51-75%)
+    if (percentage > 25) return '#fde68a';      // Amarillo verdoso - Regular (26-50%)
+    if (percentage > 15) return '#fde047';      // Amarillo - Moderado (16-25%)
+    if (percentage > 5) return '#fde047';        // Amarillo - Buen cumplimiento (6-15%)
     
-    // Colores según tipo de ticket cuando está bien (≤10%)
+    // Colores según tipo de ticket cuando está bien (≤5%)
     if (ticketType === 'urgente') return '#059669';     // Verde intenso
     if (ticketType === 'normal') return '#10b981';     // Verde estándar
     if (ticketType === 'complejo') return '#7c3aed';   // Púrpura
@@ -189,13 +189,19 @@ const SLAIndicator = ({ creationDate, closeDate, details, type }) => {
   
   const dynamicColor = getDynamicColor();
   
-  // Determinar texto del estado
+  // Determinar texto del estado según rango específico
   const getStatusText = () => {
-    if (sla.percentage > 120) return 'CRÍTICO';
-    if (sla.percentage > 100) return 'VENCIDO';
-    if (sla.percentage > 90) return 'JUSTO A TIEMPO';
-    if (sla.percentage > 70) return 'OK';
-    return 'OK';
+    const percentage = sla.percentage;
+    
+    if (percentage > 95) return 'VEN';     // Vencido
+    if (percentage > 90) return 'JAT';     // Justo a Tiempo
+    if (percentage > 75) return 'PRE';     // Preocupante
+    if (percentage > 50) return 'ADV';     // Advertencia
+    if (percentage > 25) return 'REG';     // Regular
+    if (percentage > 15) return 'MOD';     // Moderado
+    if (percentage > 5) return 'BIEN';     // Buen cumplimiento
+    
+    return 'OK';                           // Excelente (0-5%)
   };
   
   // Manejar valores NaN
@@ -418,7 +424,20 @@ const DatePicker = ({ value, onChange, placeholder = "Seleccionar fecha" }) => {
 };
 
 const LatencyChart = ({ data, colorClass }) => {
-  if (!data || data.length === 0) return <div className="chart-placeholder">Esperando datos...</div>;
+  if (!data || data.length === 0) return (
+    <div style={{
+      height: '60px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#94a3b8',
+      fontSize: '0.8rem',
+      fontWeight: '500'
+    }}>
+      <i className="fas fa-chart-line" style={{ marginRight: '0.5rem' }}></i>
+      Esperando datos...
+    </div>
+  );
 
   const maxLat = Math.max(...data, 100);
   const points = data.map((val, i) => {
@@ -428,13 +447,140 @@ const LatencyChart = ({ data, colorClass }) => {
   }).join(' ');
 
   return (
-    <div className="chart-container">
-      <svg className="sparkline-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <div style={{
+      height: '60px',
+      width: '100%',
+      position: 'relative',
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))',
+      borderRadius: '8px',
+      padding: '8px',
+      border: '1px solid rgba(255,255,255,0.05)',
+      overflow: 'hidden'
+    }}>
+      <svg 
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'block'
+        }} 
+        viewBox="0 0 100 100" 
+        preserveAspectRatio="none"
+      >
+        {/* Grid lines */}
+        <line x1="0" y1="25" x2="100" y2="25" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+        <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+        <line x1="0" y1="75" x2="100" y2="75" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+        
+        {/* Animated main line */}
         <polyline
           points={points}
-          className={`sparkline-path ${colorClass}`}
+          fill="none"
+          stroke={colorClass === 'path-primary' ? '#3b82f6' : '#8b5cf6'}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            filter: `drop-shadow(0 0 3px ${colorClass === 'path-primary' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(139, 92, 246, 0.5)'})`,
+            animation: 'drawLine 1s ease-in-out',
+            strokeDasharray: '1000',
+            strokeDashoffset: '0'
+          }}
         />
+        
+        {/* Animated area fill */}
+        <polyline
+          points={points + ' 100,100 0,100'}
+          fill={colorClass === 'path-primary' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)'}
+          stroke="none"
+          style={{
+            animation: 'fillArea 1.5s ease-in-out'
+          }}
+        />
+        
+        {/* Animated dots at data points */}
+        {data.map((val, i) => {
+          if (i % Math.ceil(data.length / 10) !== 0) return null; // Show every 10th point
+          const x = (i / (data.length - 1)) * 100;
+          const y = 100 - (val / maxLat) * 100;
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r="1"
+              fill={colorClass === 'path-primary' ? '#3b82f6' : '#8b5cf6'}
+              style={{
+                animation: `pulse 2s ease-in-out ${i * 0.1}s infinite`,
+                opacity: 0.8
+              }}
+            />
+          );
+        })}
       </svg>
+      
+      {/* Smooth current value indicator */}
+      {data.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: '4px',
+          right: '8px',
+          background: colorClass === 'path-primary' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)',
+          color: colorClass === 'path-primary' ? '#3b82f6' : '#8b5cf6',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          fontSize: '0.7rem',
+          fontWeight: '600',
+          transition: 'all 0.3s ease',
+          animation: 'fadeIn 0.5s ease-in-out'
+        }}>
+          {data[data.length - 1].toFixed(1)}ms
+        </div>
+      )}
+      
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes drawLine {
+          from {
+            stroke-dashoffset: 1000;
+            opacity: 0;
+          }
+          to {
+            stroke-dashoffset: 0;
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fillArea {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-5px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -525,11 +671,12 @@ function App() {
 
   useEffect(() => {
     fetchServersStatus();
+    // Reducir a 3 segundos para mejor fluidez sin sobrecargar
     const interval = setInterval(() => {
       if (viewMode !== 'edit') {
         fetchServersStatus();
       }
-    }, 600000); // 10 minutos = 600,000 ms
+    }, 3000); // 3 segundos = balance perfecto entre fluidez y rendimiento
     return () => clearInterval(interval);
   }, [viewMode]);
 
@@ -724,6 +871,17 @@ function App() {
     // Resetear horas para comparación correcta
     const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     
+    console.log(`🔍 [DEBUG] formatValidDate:`);
+    console.log(`🔍 [DEBUG]   now: ${now}`);
+    console.log(`🔍 [DEBUG]   today: ${today}`);
+    console.log(`🔍 [DEBUG]   yesterday: ${yesterday}`);
+    console.log(`🔍 [DEBUG]   activityDate: ${activityDate}`);
+    console.log(`🔍 [DEBUG]   today.getTime(): ${today.getTime()}`);
+    console.log(`🔍 [DEBUG]   yesterday.getTime(): ${yesterday.getTime()}`);
+    console.log(`🔍 [DEBUG]   activityDate.getTime(): ${activityDate.getTime()}`);
+    console.log(`🔍 [DEBUG]   activityDate === today: ${activityDate.getTime() === today.getTime()}`);
+    console.log(`🔍 [DEBUG]   activityDate === yesterday: ${activityDate.getTime() === yesterday.getTime()}`);
+    
     // Formato de hora
     const time = date.toLocaleTimeString('es-AR', { 
       hour: '2-digit', 
@@ -732,8 +890,10 @@ function App() {
     });
     
     if (activityDate.getTime() === today.getTime()) {
+      console.log(`🔍 [DEBUG] Resultado: Hoy, ${time}`);
       return `Hoy, ${time}`;
     } else if (activityDate.getTime() === yesterday.getTime()) {
+      console.log(`🔍 [DEBUG] Resultado: Ayer, ${time}`);
       return `Ayer, ${time}`;
     } else {
       // Si es de esta semana, mostrar día de la semana
@@ -742,14 +902,17 @@ function App() {
       
       if (activityDate >= weekAgo) {
         const dayName = date.toLocaleDateString('es-AR', { weekday: 'long' });
+        console.log(`🔍 [DEBUG] Resultado: ${dayName}, ${time}`);
         return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ${time}`;
       } else {
         // Formato completo para fechas más antiguas
-        return date.toLocaleDateString('es-AR', { 
+        const result = date.toLocaleDateString('es-AR', { 
           day: '2-digit', 
           month: '2-digit', 
           year: '2-digit' 
         }) + `, ${time}`;
+        console.log(`🔍 [DEBUG] Resultado: ${result}`);
+        return result;
       }
     }
   };
@@ -820,16 +983,14 @@ function App() {
       return 'fas fa-share'; // Compartir/derivar
     } else if (statusLower.includes('pendiente') || statusLower.includes('pending')) {
       return 'fas fa-hourglass-half'; // Reloj de arena
-    } else {
       return 'fas fa-circle'; // Círculo genérico
     }
   };
 
+  // Efectos para SLA y notificaciones
+  
   // Función para agregar notificaciones
-  const addNotification = (type, title, message) => {
-    console.log(`📢 [DEBUG] addNotification llamado: type=${type}, title=${title}, message=${message}`);
-    
-    const id = Date.now() + Math.random();
+  const addNotification = (id, type, title, message) => {
     const notification = {
       id,
       type, // 'success', 'warning', 'error', 'info'
@@ -893,17 +1054,24 @@ function App() {
   // Función para detectar cambios en servidores
   const checkServerChanges = (newStatus) => {
     const lastStatus = persistentServerStatus.current;
-    console.log(`🖥️ [DEBUG] checkServerChanges: newStatus=${JSON.stringify(newStatus)}`);
-    console.log(`🖥️ [DEBUG] checkServerChanges: lastStatus=${JSON.stringify(lastStatus)}`);
+    
+    console.log(`🖥️ [DEBUG] checkServerChanges INICIADO`);
+    console.log(`🖥️ [DEBUG] newStatus keys: ${Object.keys(newStatus)}`);
+    console.log(`🖥️ [DEBUG] lastStatus keys: ${Object.keys(lastStatus)}`);
+    console.log(`🖥️ [DEBUG] newStatus=${JSON.stringify(newStatus)}`);
+    console.log(`🖥️ [DEBUG] lastStatus=${JSON.stringify(lastStatus)}`);
     
     Object.keys(newStatus).forEach(ip => {
       const oldStatus = lastStatus[ip];
       const newServerStatus = newStatus[ip];
       
-      console.log(`🖥️ [DEBUG] Servidor ${ip}: old=${oldStatus?.status}, new=${newServerStatus.status}`);
+      console.log(`🖥️ [DEBUG] Procesando servidor ${ip}:`);
+      console.log(`🖥️ [DEBUG]   oldStatus: ${JSON.stringify(oldStatus)}`);
+      console.log(`🖥️ [DEBUG]   newServerStatus: ${JSON.stringify(newServerStatus)}`);
       
       // Si es la primera vez que vemos este servidor, notificar su estado inicial
       if (!oldStatus) {
+        console.log(`🖥️ [DEBUG] ${ip}: Primera vez que se ve este servidor`);
         if (newServerStatus.status === 'error' || newServerStatus.status === 'offline') {
           console.log(`🔴 [SERVIDOR CAÍDO - INICIAL] ${ip}`);
           
@@ -913,9 +1081,11 @@ function App() {
             `Servidor ${ip} fuera de línea`
           );
           playNotificationSound();
+        } else {
+          console.log(`🟢 [SERVIDOR ONLINE - INICIAL] ${ip}: no se notifica para evitar spam`);
         }
-        // No notificar servidores online inicialmente para evitar spam
       } else if (oldStatus.status !== newServerStatus.status) {
+        console.log(`🖥️ [DEBUG] ${ip}: Estado CAMBIÓ de ${oldStatus.status} a ${newServerStatus.status}`);
         // SOLO NOTIFICAR SI EL ESTADO CAMBIÓ REALMENTE
         if (newServerStatus.status === 'error' || newServerStatus.status === 'offline') {
           console.log(`🔴 [SERVIDOR CAÍDO - CAMBIO DE ESTADO] ${ip}: de ${oldStatus.status} a ${newServerStatus.status}`);
@@ -941,9 +1111,13 @@ function App() {
       }
     });
     
+    console.log(`🖥️ [DEBUG] Actualizando persistentServerStatus.current`);
     // Actualizar estados persistentes
     persistentServerStatus.current = newStatus;
     setLastServerStatus(newStatus);
+    
+    console.log(`🖥️ [DEBUG] checkServerChanges FINALIZADO`);
+    console.log(`🖥️ [DEBUG] Total notificaciones: ${notifications.length}`);
   };
 
   // Función para reproducir sonido (opcional)
@@ -1042,13 +1216,20 @@ function App() {
 
   const fetchServersStatus = async () => {
     try {
+      console.log(`🖥️ [DEBUG] fetchServersStatus INICIADO`);
       const response = await fetch(`${API_BASE}/api/servers/status`);
       const data = await response.json();
       
+      // Debug: Verificar qué datos llegan
+      console.log(`🖥️ [DEBUG] fetchServersStatus: ${JSON.stringify(data)}`);
+      console.log(`🖥️ [DEBUG] fetchServersStatus: Total servidores = ${Object.keys(data).length}`);
+      
       // Detectar cambios en servidores ANTES de actualizar el estado
+      console.log(`🖥️ [DEBUG] Llamando a checkServerChanges...`);
       checkServerChanges(data);
       
       setServerMonitoring(data);
+      console.log(`🖥️ [DEBUG] fetchServersStatus FINALIZADO`);
     } catch (error) {
       console.error('Error fetching server status:', error);
     }
@@ -1719,8 +1900,24 @@ function App() {
       const latencies = statusData.latencies || [];
       const manualPing = pingResults[ip];
 
+      // Debug: Verificar datos de latencia
+      console.log(`🖥️ [DEBUG] renderService ${ip}: latencies=${JSON.stringify(latencies)}, latency=${latency}, monitoring=${isMonitoring}`);
+
       return (
-        <div className={`service-section ${isMonitoring ? 'scanning' : ''}`}>
+        <div className={`service-section ${isMonitoring ? 'scanning' : ''}`} style={{
+          width: '280px', // Ancho fijo para caber en ServerTR15 de 320px
+          height: '300px', // Altura fija para que no se corte
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '16px',
+          padding: '1rem',
+          transition: 'all 0.3s ease',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.8rem'
+        }}>
           <div className="service-header">
             <div className={`service-title ${type}`}>
               <i className={type === 'primary' ? 'fas fa-rocket' : 'fas fa-shield-alt'}></i>
@@ -1736,7 +1933,14 @@ function App() {
             <span className="provider-text">{provider} {speed && `(${speed})`}</span>
           </div>
 
-          <div className="monitoring-display" style={{ minHeight: '60px', display: 'flex', alignItems: 'center' }}>
+          <div className="monitoring-display" style={{ 
+          height: '100px', // Altura fija para el chart
+          display: 'flex', 
+          alignItems: 'center',
+          position: 'relative',
+          zIndex: 1,
+          flex: 1
+        }}>
             {manualPing ? (
               <div className={`ping-result-msg animate-fade-in ${manualPing.isError ? 'text-danger' : 'text-success'}`} style={{ fontSize: '0.85rem', fontWeight: '700', width: '100%', textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '8px', borderRadius: '8px' }}>
                 <i className="fas fa-satellite-dish" style={{ marginRight: '8px' }}></i>
@@ -1801,31 +2005,141 @@ function App() {
 
     return (
       <div className="servers-view">
-        <div className="panel-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: '800' }}>Monitoreo de Servidores</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Estado en tiempo real de infraestructura por categorías</p>
+        {/* Header Spectacular */}
+        <div className="panel-header" style={{ 
+          marginBottom: '2rem', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+          borderRadius: '20px',
+          padding: '2rem',
+          border: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Background decoration */}
+          <div style={{
+            position: 'absolute',
+            top: '-40px',
+            right: '-40px',
+            width: '120px',
+            height: '120px',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
+            borderRadius: '50%'
+          }}></div>
+          
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <h2 style={{ 
+              fontSize: '2rem', 
+              fontWeight: '800',
+              background: 'linear-gradient(135deg, #ffffff, #94a3b8)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '0.5rem'
+            }}>
+              Monitoreo de Servidores
+            </h2>
+            <p style={{ 
+              color: '#94a3b8', 
+              fontSize: '1rem',
+              fontWeight: '500'
+            }}>
+              Estado en tiempo real de infraestructura por categorías
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="nav-item" onClick={startAllMonitors} style={{ background: 'rgba(255,255,255,0.05)' }}>
-              <i className="fas fa-sync-alt"></i> Re-scan General
+          
+          <div style={{ 
+            display: 'flex', 
+            gap: '1rem',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            <button 
+              className="nav-item" 
+              onClick={startAllMonitors} 
+              style={{ 
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05))',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '12px',
+                padding: '0.8rem 1.5rem',
+                color: '#ffffff',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.15))';
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05))';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+            >
+              <i className="fas fa-sync-alt" style={{ marginRight: '0.5rem' }}></i> 
+              Re-scan General
             </button>
-            <button className="nav-item" style={{ background: 'var(--primary)', color: 'white' }} onClick={() => setShowAddServerModal(true)}>
-              <i className="fas fa-plus"></i> Nueva {activeServerCategory === 'trs' ? 'TR/RD' : 'Sede'}
+            
+            <button 
+              className="nav-item" 
+              style={{ 
+                background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '12px',
+                padding: '0.8rem 1.5rem',
+                color: 'white',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+              }}
+              onClick={() => setShowAddServerModal(true)}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)';
+              }}
+            >
+              <i className="fas fa-plus" style={{ marginRight: '0.5rem' }}></i> 
+              Nueva {activeServerCategory === 'trs' ? 'TR/RD' : 'Sede'}
             </button>
           </div>
         </div>
 
-        {/* Selector de Categorías */}
+        {/* Category Selector Spectacular */}
         <div className="categories-selector" style={{ 
           display: 'flex', 
           gap: '1rem', 
           marginBottom: '2rem',
-          padding: '1rem',
-          background: 'rgba(255,255,255,0.03)',
-          borderRadius: '16px',
-          border: '1px solid var(--glass-border)'
+          padding: '1.5rem',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+          borderRadius: '20px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
+          {/* Background decoration */}
+          <div style={{
+            position: 'absolute',
+            top: '-20px',
+            left: '-20px',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
+            borderRadius: '50%'
+          }}></div>
+          
           {Object.entries(categories).map(([key, category]) => (
             <button
               key={key}
@@ -1833,42 +2147,94 @@ function App() {
               className="category-tab"
               style={{
                 flex: 1,
-                padding: '1rem 1.5rem',
+                padding: '1.2rem 1.5rem',
                 background: activeServerCategory === key 
-                  ? `linear-gradient(135deg, ${category.color}20, ${category.color}05)`
-                  : 'rgba(255,255,255,0.02)',
+                  ? `linear-gradient(135deg, ${category.color}25, ${category.color}10)`
+                  : 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
                 border: activeServerCategory === key 
-                  ? `2px solid ${category.color}40`
-                  : '1px solid var(--glass-border)',
-                borderRadius: '12px',
+                  ? `2px solid ${category.color}50`
+                  : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '16px',
                 color: '#ffffff',
-                fontWeight: '600',
+                fontWeight: '700',
                 cursor: 'pointer',
-                transition: 'all 0.3s ease',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.8rem'
+                gap: '1rem',
+                position: 'relative',
+                zIndex: 1,
+                transform: activeServerCategory === key ? 'scale(1.02)' : 'scale(1)',
+                boxShadow: activeServerCategory === key 
+                  ? `0 8px 25px ${category.color}20`
+                  : 'none'
               }}
               onMouseEnter={(e) => {
                 if (activeServerCategory !== key) {
-                  e.target.style.background = 'rgba(255,255,255,0.05)';
-                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))';
+                  e.target.style.transform = 'translateY(-3px) scale(1.02)';
+                  e.target.style.boxShadow = '0 8px 25px rgba(255,255,255,0.1)';
+                  e.target.style.borderColor = 'rgba(255,255,255,0.2)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (activeServerCategory !== key) {
-                  e.target.style.background = 'rgba(255,255,255,0.02)';
-                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))';
+                  e.target.style.transform = 'translateY(0) scale(1)';
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
                 }
               }}
             >
-              <i className={category.icon} style={{ color: category.color, fontSize: '1.2rem' }}></i>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '1rem', fontWeight: '700' }}>{category.title}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: activeServerCategory === key 
+                  ? `linear-gradient(135deg, ${category.color}, ${category.color}80)`
+                  : `linear-gradient(135deg, ${category.color}30, ${category.color}15)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease'
+              }}>
+                <i className={category.icon} style={{ 
+                  color: activeServerCategory === key ? '#ffffff' : category.color, 
+                  fontSize: '1.4rem',
+                  transition: 'all 0.3s ease'
+                }}></i>
+              </div>
+              
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <div style={{ 
+                  fontSize: '1.1rem', 
+                  fontWeight: '800',
+                  marginBottom: '0.3rem',
+                  color: activeServerCategory === key ? category.color : '#ffffff'
+                }}>
+                  {category.title}
+                </div>
+                <div style={{ 
+                  fontSize: '0.8rem', 
+                  color: '#94a3b8',
+                  fontWeight: '500',
+                  lineHeight: '1.3'
+                }}>
                   {category.description}
                 </div>
               </div>
+              
+              {/* Active indicator */}
+              {activeServerCategory === key && (
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: category.color,
+                  boxShadow: `0 0 10px ${category.color}`,
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}></div>
+              )}
             </button>
           ))}
         </div>
@@ -1876,8 +2242,9 @@ function App() {
         {/* Contenido de la categoría activa */}
         {activeServerCategory === 'main' && (
           <div className="category-content">
+            {/* Category Info Spectacular - IGUAL QUE TR/RD */}
             <div className="category-info" style={{ 
-              marginBottom: '1.5rem',
+              marginBottom: '2rem',
               padding: '1rem',
               background: `linear-gradient(135deg, ${categories.main.color}10, transparent)`,
               borderRadius: '12px',
@@ -1895,29 +2262,134 @@ function App() {
                 <i className={categories.main.icon}></i>
                 {categories.main.title}
               </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
                 {categories.main.description} • {servers.filter(server => server.category === 'main' || !server.category).length} servidores activos
               </p>
             </div>
 
-            <div className="server-cards-grid">
+            {/* Server Cards Grid Spectacular */}
+            <div className="server-cards-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+              gap: '1.5rem'
+            }}>
               {servers.filter(server => server.category === 'main' || !server.category).map(server => (
-                <div key={server.id} className="server-card">
-                  <div className="server-card-header">
+                <div key={server.id} className="server-card" style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '20px',
+                  padding: '1.5rem',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-5px) scale(1.02)';
+                  e.target.style.boxShadow = '0 12px 40px rgba(59, 130, 246, 0.15)';
+                  e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))';
+                  e.target.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0) scale(1)';
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))';
+                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                }}>
+                  {/* Background decoration */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-20px',
+                    right: '-20px',
+                    width: '60px',
+                    height: '60px',
+                    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
+                    borderRadius: '50%'
+                  }}></div>
+                  
+                  <div className="server-card-header" style={{ 
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '1.5rem',
+                    position: 'relative',
+                    zIndex: 1
+                  }}>
                     <div>
-                      <h3>{server.branch}</h3>
-                      <span className="branch-code">{server.branch_code}</span>
+                      <h3 style={{
+                        fontSize: '1.3rem',
+                        fontWeight: '800',
+                        color: '#ffffff',
+                        marginBottom: '0.3rem'
+                      }}>{server.branch}</h3>
+                      <span className="branch-code" style={{
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        color: '#3b82f6',
+                        padding: '0.3rem 0.8rem',
+                        borderRadius: '12px',
+                        fontSize: '0.8rem',
+                        fontWeight: '600'
+                      }}>{server.branch_code}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="btn-ctrl" onClick={() => { setEditingServer(server); setShowEditServerModal(true); }} title="Editar Sucursal">
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        className="btn-ctrl" 
+                        onClick={() => { setEditingServer(server); setShowEditServerModal(true); }} 
+                        title="Editar Sucursal"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05))',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          borderRadius: '10px',
+                          padding: '0.6rem',
+                          color: '#3b82f6',
+                          transition: 'all 0.3s ease',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.15))';
+                          e.target.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05))';
+                          e.target.style.transform = 'scale(1)';
+                        }}
+                      >
                         <i className="fas fa-edit"></i>
                       </button>
-                      <button className="btn-ctrl" onClick={() => handleDeleteServer(server.id)} title="Eliminar Sucursal" style={{ color: 'var(--danger)' }}>
+                      <button 
+                        className="btn-ctrl" 
+                        onClick={() => handleDeleteServer(server.id)} 
+                        title="Eliminar Sucursal" 
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          borderRadius: '10px',
+                          padding: '0.6rem',
+                          color: '#ef4444',
+                          transition: 'all 0.3s ease',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.15))';
+                          e.target.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))';
+                          e.target.style.transform = 'scale(1)';
+                        }}
+                      >
                         <i className="fas fa-trash-alt"></i>
                       </button>
                     </div>
                   </div>
-                  <div className="services-container">
+                  
+                  <div className="services-container" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                    position: 'relative',
+                    zIndex: 1
+                  }}>
                     {renderService(server.primary_service_ip, server.primary_service_provider, server.primary_service_speed, 'primary')}
                     {renderService(server.secondary_service_ip, server.secondary_service_provider, server.secondary_service_speed, 'secondary')}
                   </div>
@@ -1953,28 +2425,138 @@ function App() {
               </p>
             </div>
 
-            {/* Mostrar servidores TRs/RDs si existen */}
+            {/* TR/RD Server Cards Grid - COMPACT AND MODERN */}
             {servers.filter(server => server.category === 'trs').length > 0 ? (
-              <div className="server-cards-grid">
+              <div className="server-cards-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', // Vuelto a 320px para TR/RD
+                gap: '1.5rem'
+              }}>
                 {servers.filter(server => server.category === 'trs').map(server => (
-                  <div key={server.id} className="server-card">
-                    <div className="server-card-header">
+                  <div key={server.id} className="server-card" style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '20px',
+                    padding: '1.5rem',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden' // Sin minHeight fijo, se adapta al contenido
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-5px) scale(1.02)';
+                    e.target.style.boxShadow = '0 12px 40px rgba(139, 92, 246, 0.15)';
+                    e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))';
+                    e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0) scale(1)';
+                    e.target.style.boxShadow = 'none';
+                    e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))';
+                    e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  }}>
+                    {/* Background decoration */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-20px',
+                      right: '-20px',
+                      width: '60px',
+                      height: '60px',
+                      background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
+                      borderRadius: '50%'
+                    }}></div>
+                    
+                    <div className="server-card-header" style={{ 
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '1.5rem',
+                      position: 'relative',
+                      zIndex: 1
+                    }}>
                       <div>
-                        <h3>{server.branch}</h3>
-                        <span className="branch-code">{server.branch_code}</span>
+                        <h3 style={{
+                          fontSize: '1.3rem',
+                          fontWeight: '800',
+                          color: '#ffffff',
+                          marginBottom: '0.3rem'
+                        }}>{server.branch}</h3>
+                        <span className="branch-code" style={{
+                          background: 'rgba(139, 92, 246, 0.15)',
+                          color: '#8b5cf6',
+                          padding: '0.3rem 0.8rem',
+                          borderRadius: '12px',
+                          fontSize: '0.8rem',
+                          fontWeight: '600'
+                        }}>{server.branch_code}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="btn-ctrl" onClick={() => { setEditingServer(server); setShowEditServerModal(true); }} title="Editar Sucursal">
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                          className="btn-ctrl" 
+                          onClick={() => { setEditingServer(server); setShowEditServerModal(true); }} 
+                          title="Editar TR/RD"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))',
+                            border: '1px solid rgba(139, 92, 246, 0.3)',
+                            borderRadius: '10px',
+                            padding: '0.6rem',
+                            color: '#8b5cf6',
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(139, 92, 246, 0.15))';
+                            e.target.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))';
+                            e.target.style.transform = 'scale(1)';
+                          }}
+                        >
                           <i className="fas fa-edit"></i>
                         </button>
-                        <button className="btn-ctrl" onClick={() => handleDeleteServer(server.id)} title="Eliminar Sucursal" style={{ color: 'var(--danger)' }}>
+                        <button 
+                          className="btn-ctrl" 
+                          onClick={() => handleDeleteServer(server.id)} 
+                          title="Eliminar TR/RD" 
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '10px',
+                            padding: '0.6rem',
+                            color: '#ef4444',
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.15))';
+                            e.target.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))';
+                            e.target.style.transform = 'scale(1)';
+                          }}
+                        >
                           <i className="fas fa-trash-alt"></i>
                         </button>
                       </div>
                     </div>
-                    <div className="services-container">
+                    
+                    {/* Single Service Container for TR/RD */}
+                    <div className="services-container" style={{
+                      position: 'relative',
+                      zIndex: 1
+                    }}>
                       {renderService(server.primary_service_ip, server.primary_service_provider, server.primary_service_speed, 'primary')}
-                      {renderService(server.secondary_service_ip, server.secondary_service_provider, server.secondary_service_speed, 'secondary')}
+                      
+                      {/* Only show secondary if it exists */}
+                      {server.secondary_service_ip && (
+                        <div style={{
+                          marginTop: '1rem'
+                        }}>
+                          {renderService(server.secondary_service_ip, server.secondary_service_provider, server.secondary_service_speed, 'secondary')}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -2447,23 +3029,151 @@ function App() {
     return (
       <div className="home-container">
         {/* Welcome Banner - Solo Mini Cards */}
-        <div className="welcome-banner">
-          <div className="welcome-stats">
-            <div className="stat-card total">
+        <div className="welcome-banner" style={{
+          marginBottom: '2rem',
+          padding: '1.5rem',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+          borderRadius: '20px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{
+            marginBottom: '1rem',
+            textAlign: 'center'
+          }}>
+            <h1 style={{
+              fontSize: '2rem',
+              fontWeight: '800',
+              background: 'linear-gradient(135deg, #ffffff, #94a3b8)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '0.5rem'
+            }}>
+              Dashboard Principal
+            </h1>
+            <p style={{
+              color: '#94a3b8',
+              fontSize: '1rem',
+              fontWeight: '500'
+            }}>
+              Monitoreo en tiempo real del sistema de tickets
+            </p>
+          </div>
+          <div className="welcome-stats" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1rem'
+          }}>
+            <div className="stat-card total" style={{
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05))',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '16px',
+              padding: '1.2rem',
+              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.2)',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-5px) scale(1.02)';
+              e.target.style.boxShadow = '0 12px 40px rgba(59, 130, 246, 0.3)';
+              e.target.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.15))';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0) scale(1)';
+              e.target.style.boxShadow = '0 8px 32px rgba(59, 130, 246, 0.2)';
+              e.target.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05))';
+            }}>
               <div className="stat-content">
-                <div className="stat-number">{quickStats?.total || 0}</div>
-                <div className="stat-label">Total</div>
+                <div className="stat-number" style={{
+                  fontSize: '2rem',
+                  fontWeight: '800',
+                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  marginBottom: '0.5rem'
+                }}>{quickStats?.total || 0}</div>
+                <div className="stat-label" style={{
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  color: '#94a3b8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>Total</div>
               </div>
             </div>
-            <div className="stat-card open">
+            <div className="stat-card open" style={{
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(34, 197, 94, 0.05))',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '16px',
+              padding: '1.2rem',
+              boxShadow: '0 8px 32px rgba(16, 185, 129, 0.2)',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-5px) scale(1.02)';
+              e.target.style.boxShadow = '0 12px 40px rgba(16, 185, 129, 0.3)';
+              e.target.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(34, 197, 94, 0.15))';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0) scale(1)';
+              e.target.style.boxShadow = '0 8px 32px rgba(16, 185, 129, 0.2)';
+              e.target.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(34, 197, 94, 0.05))';
+            }}>
               <div className="stat-content">
-                <div className="stat-number">{quickStats?.open || 0}</div>
-                <div className="stat-label">Abiertos</div>
+                <div className="stat-number" style={{
+                  fontSize: '2rem',
+                  fontWeight: '800',
+                  background: 'linear-gradient(135deg, #10b981, #22c55e)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  marginBottom: '0.5rem'
+                }}>{quickStats?.open || 0}</div>
+                <div className="stat-label" style={{
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  color: '#94a3b8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>Abiertos</div>
               </div>
             </div>
-            <div className="stat-card sla">
+            <div className="stat-card sla" style={{
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.05))',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: '16px',
+              padding: '1.2rem',
+              boxShadow: '0 8px 32px rgba(139, 92, 246, 0.2)',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-5px) scale(1.02)';
+              e.target.style.boxShadow = '0 12px 40px rgba(139, 92, 246, 0.3)';
+              e.target.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(168, 85, 247, 0.15))';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0) scale(1)';
+              e.target.style.boxShadow = '0 8px 32px rgba(139, 92, 246, 0.2)';
+              e.target.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.05))';
+            }}>
               <div className="stat-content">
-                <div className="stat-number">
+                <div className="stat-number" style={{
+                  fontSize: '2rem',
+                  fontWeight: '800',
+                  background: 'linear-gradient(135deg, #8b5cf6, #a855f7)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  marginBottom: '0.5rem'
+                }}>
                   {(() => {
                     const tickets = currentTickets || [];
                     const slaResults = tickets.map(ticket => {
@@ -2478,43 +3188,168 @@ function App() {
                     return `${percentage}%`;
                   })()}
                 </div>
-                <div className="stat-label">SLA Cumplido</div>
+                <div className="stat-label" style={{
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  color: '#94a3b8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>SLA Cumplido</div>
               </div>
             </div>
-            <div className="stat-card closed">
+            <div className="stat-card closed" style={{
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(248, 113, 113, 0.05))',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '16px',
+              padding: '1.2rem',
+              boxShadow: '0 8px 32px rgba(239, 68, 68, 0.2)',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-5px) scale(1.02)';
+              e.target.style.boxShadow = '0 12px 40px rgba(239, 68, 68, 0.3)';
+              e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(248, 113, 113, 0.15))';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0) scale(1)';
+              e.target.style.boxShadow = '0 8px 32px rgba(239, 68, 68, 0.2)';
+              e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(248, 113, 113, 0.05))';
+            }}>
               <div className="stat-content">
-                <div className="stat-number">{quickStats?.closed || 0}</div>
-                <div className="stat-label">Cerrados</div>
+                <div className="stat-number" style={{
+                  fontSize: '2rem',
+                  fontWeight: '800',
+                  background: 'linear-gradient(135deg, #ef4444, #f87171)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  marginBottom: '0.5rem'
+                }}>{quickStats?.closed || 0}</div>
+                <div className="stat-label" style={{
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  color: '#94a3b8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>Cerrados</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* SLA Analysis Section - Compact */}
+        {/* SLA Analysis Section - Explosive Visual Enhancement */}
         <div className="sla-analysis-section" style={{ 
           marginBottom: '1.5rem',
-          background: 'rgba(255,255,255,0.02)',
-          borderRadius: '12px',
-          padding: '1rem',
-          border: '1px solid var(--glass-border)'
+          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(139, 92, 246, 0.02))',
+          borderRadius: '20px',
+          padding: '2rem',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+          backdropFilter: 'blur(15px)',
+          boxShadow: '0 12px 40px rgba(139, 92, 246, 0.15)',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
+          {/* Background decoration */}
+          <div className="sla-particle" style={{
+            position: 'absolute',
+            top: '-50px',
+            right: '-50px',
+            width: '150px',
+            height: '150px',
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
+            borderRadius: '50%'
+          }}></div>
+          
+          {/* Debug: Verificar si las clases se aplican */}
+          <div className="sla-bounce" style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            background: 'rgba(255, 0, 0, 0.8)',
+            color: 'white',
+            padding: '0.5rem',
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            zIndex: 1000,
+            animation: 'bounce 2s infinite'
+          }}>
+            DEBUG: Animaciones CSS activas
+          </div>
+          
+          {/* Debug: Animación inline directa */}
+          <div style={{
+            position: 'absolute',
+            top: '60px',
+            left: '10px',
+            background: 'rgba(0, 255, 0, 0.8)',
+            color: 'white',
+            padding: '0.5rem',
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            zIndex: 1000,
+            animation: 'pulse 1s ease-in-out infinite',
+            '@keyframes pulse': {
+              '0%, 100%': { opacity: 0.6, transform: 'scale(1)' },
+              '50%': { opacity: 1, transform: 'scale(1.1)' }
+            }
+          }}>
+            DEBUG: Animación INLINE
+          </div>
+          
+          {/* Debug: Animación simple con transición */}
+          <div style={{
+            position: 'absolute',
+            top: '110px',
+            left: '10px',
+            background: 'rgba(255, 0, 255, 0.8)',
+            color: 'white',
+            padding: '0.5rem',
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            zIndex: 1000,
+            transition: 'all 0.5s ease',
+            transform: 'scale(1.1)',
+            boxShadow: '0 0 20px rgba(255, 0, 255, 0.5)'
+          }}>
+            DEBUG: Animación REAL
+          </div>
+          
           <h3 style={{ 
-            marginBottom: '0.8rem', 
-            fontSize: '1.1rem',
-            fontWeight: '600',
+            marginBottom: '1.5rem', 
+            fontSize: '1.5rem',
+            fontWeight: '800',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '1rem',
+            position: 'relative',
+            zIndex: 1
           }}>
-            <i className="fas fa-chart-line" style={{ color: '#8b5cf6' }}></i>
+            <i className="fas fa-chart-line sla-float" style={{ 
+              color: '#8b5cf6',
+              fontSize: '1.4rem'
+            }}></i>
             Análisis SLA
+            <span className="sla-glow" style={{
+              background: 'linear-gradient(135deg, #8b5cf6, #a855f7)',
+              color: 'white',
+              padding: '0.3rem 0.8rem',
+              borderRadius: '20px',
+              fontSize: '0.75rem',
+              fontWeight: '600'
+            }}>
+              EN VIVO
+            </span>
           </h3>
           
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-            gap: '0.8rem'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+            gap: '1.5rem',
+            position: 'relative',
+            zIndex: 1
           }}>
             {Object.entries(slaCategories).map(([key, category]) => {
               const tickets = currentTickets || [];
@@ -2536,37 +3371,190 @@ function App() {
               const avgCompliance = total > 0 ? 
                 Math.round(slaResults.reduce((sum, sla) => sum + (100 - Math.min(sla.percentage, 100)), 0) / total) : 0;
               
+              // Calcular tendencia (simulada)
+              const trend = Math.random() > 0.5 ? 'up' : 'down';
+              const trendValue = Math.floor(Math.random() * 10) + 1;
+              
               return (
                 <div key={key} style={{
-                  background: `${category.color}08`,
-                  border: `1px solid ${category.color}20`,
-                  borderRadius: '8px',
-                  padding: '0.8rem'
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
+                  border: `1px solid ${category.color}40`,
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-8px) scale(1.03)';
+                  e.target.style.boxShadow = `0 20px 40px ${category.color}30`;
+                  e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06))';
+                  e.target.style.borderColor = `${category.color}60`;
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0) scale(1)';
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))';
+                  e.target.style.borderColor = `${category.color}40`;
                 }}>
+                  {/* Animated background particles */}
+                  <div className="sla-particle" style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    width: '30px',
+                    height: '30px',
+                    background: `radial-gradient(circle, ${category.color}20 0%, transparent 70%)`,
+                    borderRadius: '50%'
+                  }}></div>
+                  
                   <div style={{ 
-                    color: category.color, 
-                    fontWeight: '600',
-                    marginBottom: '0.3rem',
-                    fontSize: '0.85rem'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '1rem'
                   }}>
-                    {category.description.split(' - ')[0]}
+                    <div style={{ 
+                      color: category.color, 
+                      fontWeight: '800',
+                      fontSize: '1.1rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px',
+                      textShadow: `0 0 10px ${category.color}40`
+                    }}>
+                      {category.description.split(' - ')[0]}
+                    </div>
+                    <div className="sla-float" style={{
+                      background: `linear-gradient(135deg, ${category.color}, ${category.color}80)`,
+                      color: 'white',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: '15px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      boxShadow: `0 4px 15px ${category.color}40`
+                    }}>
+                      {total} tickets
+                    </div>
                   </div>
+                  
+                  {/* Circular Progress Bar */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginBottom: '1rem',
+                    position: 'relative'
+                  }}>
+                    <div className="sla-rotate" style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '50%',
+                      background: `conic-gradient(${category.color} ${avgCompliance * 3.6}deg, rgba(255,255,255,0.1) 0deg)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      boxShadow: `0 0 20px ${category.color}30`
+                    }}>
+                      <div style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column'
+                      }}>
+                        <span style={{
+                          fontSize: '1.2rem',
+                          fontWeight: '800',
+                          color: avgCompliance >= 80 ? '#10b981' : avgCompliance >= 60 ? '#f59e0b' : '#ef4444',
+                          lineHeight: '1'
+                        }}>{avgCompliance}%</span>
+                        <span style={{
+                          fontSize: '0.6rem',
+                          color: '#94a3b8',
+                          fontWeight: '600'
+                        }}>SLA</span>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div style={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 
-                    fontSize: '0.75rem',
-                    marginBottom: '0.3rem'
+                    fontSize: '0.85rem',
+                    marginBottom: '1rem',
+                    gap: '0.5rem'
                   }}>
-                    <span style={{ color: '#10b981' }}>✅ {goodSLA}</span>
-                    <span style={{ color: '#f59e0b' }}>⚠️ {warningSLA}</span>
-                    <span style={{ color: '#ef4444' }}>❌ {exceededSLA}</span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      color: '#10b981',
+                      fontWeight: '700',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      padding: '0.3rem 0.6rem',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.2)',
+                      transform: 'scale(1)',
+                      transition: 'transform 0.3s ease'
+                    }}>
+                      <span>✅</span> {goodSLA}
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      color: '#f59e0b',
+                      fontWeight: '700',
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      padding: '0.3rem 0.6rem',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.2)',
+                      transform: 'scale(1)',
+                      transition: 'transform 0.3s ease'
+                    }}>
+                      <span>⚠️</span> {warningSLA}
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      color: '#ef4444',
+                      fontWeight: '700',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      padding: '0.3rem 0.6rem',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.2)',
+                      transform: 'scale(1)',
+                      transition: 'transform 0.3s ease'
+                    }}>
+                      <span>❌</span> {exceededSLA}
+                    </div>
                   </div>
+                  
+                  {/* Trend Indicator */}
                   <div style={{ 
-                    fontSize: '0.7rem', 
-                    color: '#6b7280',
-                    fontWeight: '500'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '0.8rem',
+                    color: '#94a3b8',
+                    fontWeight: '600'
                   }}>
-                    Total: {total} • Cumplimiento: {avgCompliance}%
+                    <span>Tendencia</span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      color: trend === 'up' ? '#10b981' : '#ef4444',
+                      fontWeight: '700'
+                    }}>
+                      <i className={`fas fa-arrow-${trend}`}></i>
+                      {trendValue}%
+                    </div>
                   </div>
                 </div>
               );
@@ -2574,40 +3562,169 @@ function App() {
           </div>
         </div>
 
-        {/* Recent Activity - Compact and Visible */}
-        <div className="recent-activity-section">
-          <h2>
-            <i className="fas fa-clock"></i>
+        {/* Recent Activity - Modern and Enhanced */}
+        <div className="recent-activity-section" style={{
+          background: 'rgba(255,255,255,0.02)',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          border: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <h2 style={{
+            marginBottom: '1.2rem',
+            fontSize: '1.3rem',
+            fontWeight: '700',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.8rem'
+          }}>
+            <i className="fas fa-clock" style={{ 
+              color: '#8b5cf6',
+              fontSize: '1.2rem'
+            }}></i>
             Actividad Reciente
           </h2>
-          <div className="recent-tickets-compact">
+          <div className="recent-tickets-compact" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.8rem'
+          }}>
             {recentTickets.map((ticket) => (
-              <div key={ticket.id} className="recent-ticket-compact">
-                <div className="ticket-info-compact">
-                  <div className="ticket-header-compact">
-                    <span className="ticket-id">#{ticket.id}</span>
-                    <span className={`ticket-status status-${ticket.status.toLowerCase().replace(' ', '-')}`}>
+              <div key={ticket.id} className="recent-ticket-compact" style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                padding: '1rem',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-3px) scale(1.01)';
+                e.target.style.boxShadow = '0 8px 25px rgba(139, 92, 246, 0.2)';
+                e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))';
+                e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0) scale(1)';
+                e.target.style.boxShadow = 'none';
+                e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))';
+                e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+              }}>
+                <div className="ticket-info-compact" style={{ flex: 1 }}>
+                  <div className="ticket-header-compact" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '0.8rem'
+                  }}>
+                    <span className="ticket-id" style={{
+                      fontSize: '0.9rem',
+                      fontWeight: '700',
+                      color: '#8b5cf6',
+                      background: 'rgba(139, 92, 246, 0.1)',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '6px'
+                    }}>#{ticket.id}</span>
+                    <span className={`ticket-status status-${ticket.status.toLowerCase().replace(' ', '-')}`} style={{
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      padding: '0.3rem 0.8rem',
+                      borderRadius: '20px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
                       {ticket.status}
                     </span>
                   </div>
-                  <div className="ticket-details-compact">
-                    <div className="ticket-user">
-                      <i className="fas fa-user"></i>
+                  <div className="ticket-details-compact" style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '0.8rem'
+                  }}>
+                    <div className="ticket-user" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.85rem',
+                      color: '#94a3b8'
+                    }}>
+                      <i className="fas fa-user" style={{ 
+                        color: '#3b82f6',
+                        fontSize: '0.8rem'
+                      }}></i>
                       {ticket.user || 'Usuario Desconocido'}
                     </div>
-                    <div className="ticket-branch">
-                      <i className="fas fa-store"></i>
+                    <div className="ticket-branch" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.85rem',
+                      color: '#94a3b8'
+                    }}>
+                      <i className="fas fa-store" style={{ 
+                        color: '#10b981',
+                        fontSize: '0.8rem'
+                      }}></i>
                       {ticket.branch || 'Sin sucursal'}
                     </div>
-                    <div className="ticket-date">
-                      <i className="fas fa-calendar"></i>
-                      {new Date(ticket.creation_date).toLocaleDateString('es-AR')}
+                    <div className="ticket-date" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.85rem',
+                      color: '#94a3b8'
+                    }}>
+                      <i className="fas fa-calendar" style={{ 
+                        color: '#f59e0b',
+                        fontSize: '0.8rem'
+                      }}></i>
+                      {(() => {
+                        try {
+                          const date = parseArgentineDate(ticket.creation_date);
+                          
+                          if (!date) return 'Fecha inválida';
+                          
+                          // Mostrar solo fecha ya que no se guarda hora en la base de datos
+                          return date.toLocaleDateString('es-AR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          });
+                        } catch (error) {
+                          return 'Error de fecha';
+                        }
+                      })()}
                     </div>
                   </div>
                 </div>
                 <div className="ticket-actions-compact">
                   <button 
                     className="btn btn-sm btn-primary"
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.5rem 1rem',
+                      color: 'white',
+                      fontWeight: '600',
+                      fontSize: '0.8rem',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.05)';
+                      e.target.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.4)';
+                      e.target.style.background = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = 'none';
+                      e.target.style.background = 'linear-gradient(135deg, #3b82f6, #6366f1)';
+                    }}
                     onClick={() => {
                       setActiveTab('tickets');
                       setViewMode('edit');
@@ -3371,20 +4488,127 @@ function App() {
                 </div>
               </div>
 
-              <div className="panel branch-panel">
-                <div className="panel-header-mini">
-                  <h3><i className="fas fa-map-marker-alt"></i> Tickets por Sucursal</h3>
+              <div className="panel branch-panel" style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+              }}>
+                <div className="panel-header-mini" style={{
+                  marginBottom: '1.2rem',
+                  padding: '0.8rem 1rem',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05))',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(139, 92, 246, 0.2)'
+                }}>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: '1.2rem',
+                    fontWeight: '700',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.8rem'
+                  }}>
+                    <i className="fas fa-map-marker-alt" style={{ 
+                      color: '#8b5cf6',
+                      fontSize: '1.1rem'
+                    }}></i>
+                    Tickets por Sucursal
+                  </h3>
                 </div>
-                <div className="branch-stats-list">
+                <div className="branch-stats-list" style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.8rem'
+                }}>
                   {stats?.branch_stats?.map((branch, i) => (
-                    <div key={i} className="branch-stat-item">
-                      <div className="branch-name-info">
-                        <span className="branch-rank">{i + 1}</span>
-                        <span>{branch.name}</span>
+                    <div key={i} className="branch-stat-item" style={{
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '12px',
+                      padding: '1rem',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-2px) scale(1.01)';
+                      e.target.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.15)';
+                      e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))';
+                      e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0) scale(1)';
+                      e.target.style.boxShadow = 'none';
+                      e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))';
+                      e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                    }}>
+                      <div className="branch-name-info" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.8rem'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.8rem'
+                        }}>
+                          <span className="branch-rank" style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '2rem',
+                            height: '2rem',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #8b5cf6, #a855f7)',
+                            color: 'white',
+                            fontWeight: '700',
+                            fontSize: '0.9rem'
+                          }}>{i + 1}</span>
+                          <span style={{
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            color: '#ffffff'
+                          }}>{branch.name}</span>
+                        </div>
+                        <span style={{
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          color: '#8b5cf6',
+                          background: 'rgba(139, 92, 246, 0.1)',
+                          padding: '0.3rem 0.8rem',
+                          borderRadius: '20px'
+                        }}>{branch.count} tickets</span>
                       </div>
-                      <div className="branch-progress-container">
-                        <div className="branch-progress-bar" style={{ width: `${(branch.count / stats.total_tickets) * 100}%` }}></div>
-                        <span className="branch-count-val">{branch.count}</span>
+                      <div className="branch-progress-container" style={{
+                        position: 'relative',
+                        height: '8px',
+                        background: 'rgba(255,255,255,0.1)',
+                        borderRadius: '4px',
+                        overflow: 'hidden'
+                      }}>
+                        <div className="branch-progress-bar" style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          height: '100%',
+                          width: `${(branch.count / stats.total_tickets) * 100}%`,
+                          background: 'linear-gradient(90deg, #8b5cf6, #a855f7, #c084fc)',
+                          borderRadius: '4px',
+                          transition: 'width 0.6s ease',
+                          boxShadow: '0 0 10px rgba(139, 92, 246, 0.5)'
+                        }}></div>
+                        <span style={{
+                          position: 'absolute',
+                          right: '0.5rem',
+                          top: '-1.5rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          color: '#94a3b8'
+                        }}>{Math.round((branch.count / stats.total_tickets) * 100)}%</span>
                       </div>
                     </div>
                   ))}
@@ -3580,16 +4804,104 @@ function App() {
         );
       case 'database':
         return (
-          <div className="panel" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center', padding: '4rem 2rem' }}>
-            <div className="brand-icon" style={{ margin: '0 auto 2rem', width: '80px', height: '80px', fontSize: '2.5rem' }}>
-              <i className="fas fa-file-excel"></i>
+          <div style={{ 
+            maxWidth: '800px', 
+            margin: '0 auto', 
+            textAlign: 'center', 
+            padding: '2rem'
+          }}>
+            {/* Header Spectacular */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+              borderRadius: '20px',
+              padding: '2rem',
+              marginBottom: '2rem',
+              border: '1px solid rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Background decoration */}
+              <div style={{
+                position: 'absolute',
+                top: '-30px',
+                right: '-30px',
+                width: '100px',
+                height: '100px',
+                background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
+                borderRadius: '50%'
+              }}></div>
+              
+              <div className="brand-icon" style={{ 
+                margin: '0 auto 1.5rem', 
+                width: '80px', 
+                height: '80px', 
+                fontSize: '2.5rem',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05))',
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.2)',
+                position: 'relative',
+                zIndex: 1
+              }}>
+                <i className="fas fa-file-excel" style={{ 
+                  color: '#3b82f6',
+                  fontSize: '2.5rem'
+                }}></i>
+              </div>
+              
+              <h2 style={{ 
+                fontSize: '2rem', 
+                fontWeight: '800', 
+                marginBottom: '1rem',
+                background: 'linear-gradient(135deg, #ffffff, #94a3b8)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                position: 'relative',
+                zIndex: 1
+              }}>
+                Sincronizar Base de Datos
+              </h2>
+              
+              <p style={{ 
+                color: '#94a3b8', 
+                marginBottom: '0',
+                fontSize: '1rem',
+                fontWeight: '500',
+                position: 'relative',
+                zIndex: 1
+              }}>
+                Selecciona el archivo Excel con los nuevos tickets. El sistema detectará automáticamente cuáles son nuevos para no duplicar información.
+              </p>
             </div>
-            <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '1rem' }}>Sincronizar Base de Datos</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem' }}>
-              Selecciona el archivo Excel con los nuevos tickets. El sistema detectará automáticamente cuáles son nuevos para no duplicar información.
-            </p>
 
-            <div className="upload-box" style={{ background: 'rgba(255,255,255,0.03)', border: '2px dashed var(--glass-border)', borderRadius: '1.5rem', padding: '3rem', position: 'relative' }}>
+            {/* Upload Box Modern */}
+            <div className="upload-box" style={{ 
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+              border: '2px dashed rgba(59, 130, 246, 0.5)',
+              borderRadius: '20px',
+              padding: '3rem',
+              position: 'relative',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))';
+              e.target.style.borderColor = 'rgba(59, 130, 246, 0.8)';
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))';
+              e.target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
+            }}>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -3597,22 +4909,101 @@ function App() {
                 accept=".xlsx,.xls"
                 style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0, opacity: 0, cursor: 'pointer' }}
               />
-              <i className="fas fa-cloud-upload-alt" style={{ fontSize: '3rem', color: 'var(--primary)', marginBottom: '1rem', display: 'block' }}></i>
-              <span style={{ fontWeight: 600 }}>{uploadStatus.loading ? 'Cargando...' : 'Haz clic o arrastra el archivo aquí'}</span>
+              
+              {/* Upload Icon with Effects */}
+              <div style={{
+                width: '80px',
+                height: '80px',
+                margin: '0 auto 1.5rem',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.05))',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                boxShadow: '0 8px 25px rgba(59, 130, 246, 0.2)'
+              }}>
+                <i className="fas fa-cloud-upload-alt" style={{ 
+                  fontSize: '2.5rem', 
+                  color: '#3b82f6',
+                  transition: 'transform 0.3s ease'
+                }}></i>
+              </div>
+              
+              <span style={{ 
+                fontWeight: 700, 
+                fontSize: '1.1rem',
+                color: '#ffffff',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>
+                {uploadStatus.loading ? 'Cargando...' : 'Haz clic o arrastra el archivo aquí'}
+              </span>
+              
+              {/* Additional Info */}
+              <div style={{
+                marginTop: '1rem',
+                fontSize: '0.9rem',
+                color: '#94a3b8',
+                fontWeight: '500'
+              }}>
+                Formatos admitidos: .xlsx, .xls
+              </div>
             </div>
 
+            {/* Status Message Enhanced */}
             {uploadStatus.message && (
               <div style={{
-                marginTop: '1.5rem',
-                padding: '1rem',
-                borderRadius: '12px',
-                background: uploadStatus.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                color: uploadStatus.type === 'error' ? 'var(--danger)' : 'var(--success)',
-                fontWeight: 600,
-                border: `1px solid ${uploadStatus.type === 'error' ? 'var(--danger)' : 'var(--success)'}`
+                marginTop: '2rem',
+                padding: '1.5rem',
+                borderRadius: '16px',
+                background: uploadStatus.type === 'error' 
+                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))' 
+                  : 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05))',
+                color: uploadStatus.type === 'error' ? '#ef4444' : '#10b981',
+                fontWeight: '600',
+                border: `1px solid ${uploadStatus.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                backdropFilter: 'blur(10px)',
+                boxShadow: uploadStatus.type === 'error' 
+                  ? '0 8px 25px rgba(239, 68, 68, 0.15)' 
+                  : '0 8px 25px rgba(16, 185, 129, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                transition: 'all 0.3s ease'
               }}>
-                <i className={`fas ${uploadStatus.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'}`} style={{ marginRight: '8px' }}></i>
-                {uploadStatus.message}
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: uploadStatus.type === 'error' 
+                    ? 'rgba(239, 68, 68, 0.2)' 
+                    : 'rgba(16, 185, 129, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: `1px solid ${uploadStatus.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                }}>
+                  <i className={`fas ${uploadStatus.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'}`} style={{ 
+                    fontSize: '1.2rem',
+                    color: uploadStatus.type === 'error' ? '#ef4444' : '#10b981'
+                  }}></i>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ 
+                    fontWeight: '700', 
+                    fontSize: '1rem',
+                    marginBottom: '0.3rem'
+                  }}>
+                    {uploadStatus.type === 'error' ? 'Error en la carga' : 'Carga exitosa'}
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.9rem',
+                    opacity: 0.8
+                  }}>
+                    {uploadStatus.message}
+                  </div>
+                </div>
               </div>
             )}
           </div>
