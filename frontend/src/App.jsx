@@ -234,7 +234,7 @@ const SLAIndicator = ({ creationDate, closeDate, details, type }) => {
 };
 
 // DatePicker Component
-const DatePicker = ({ value, onChange, placeholder = "Seleccionar fecha" }) => {
+const DatePicker = ({ value, onChange, placeholder = "Seleccionar fecha", style = {} }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -297,15 +297,21 @@ const DatePicker = ({ value, onChange, placeholder = "Seleccionar fecha" }) => {
     setIsOpen(false);
   };
 
-  const handlePrevMonth = () => {
+  const handlePrevMonth = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
   };
 
-  const handleNextMonth = () => {
+  const handleNextMonth = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   };
 
-  const handleToday = () => {
+  const handleToday = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const today = new Date();
     setSelectedDate(today);
     setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -363,12 +369,17 @@ const DatePicker = ({ value, onChange, placeholder = "Seleccionar fecha" }) => {
         className="date-picker-input"
         value={selectedDate ? formatDate(selectedDate) : ''}
         placeholder={placeholder}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
         readOnly
+        style={style}
       />
       
       {isOpen && (
-        <div className="date-picker-calendar">
+        <div className="date-picker-calendar custom-datepicker-small" onClick={(e) => e.stopPropagation()}>
           <div className="calendar-header">
             <h3 className="calendar-title">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
@@ -402,7 +413,13 @@ const DatePicker = ({ value, onChange, placeholder = "Seleccionar fecha" }) => {
                 } ${
                   dayInfo.isToday ? 'today' : ''
                 }`}
-                onClick={() => dayInfo.isCurrentMonth && handleDateClick(dayInfo.day)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (dayInfo.isCurrentMonth) {
+                    handleDateClick(dayInfo.day);
+                  }
+                }}
               >
                 {dayInfo.day}
               </div>
@@ -413,7 +430,11 @@ const DatePicker = ({ value, onChange, placeholder = "Seleccionar fecha" }) => {
             <button className="calendar-today" onClick={handleToday}>
               Hoy
             </button>
-            <button className="calendar-close" onClick={() => setIsOpen(false)}>
+            <button className="calendar-close" onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOpen(false);
+            }}>
               Cerrar
             </button>
           </div>
@@ -692,14 +713,12 @@ function App() {
   useEffect(() => {
     const handleBackButton = (e) => {
       if (viewMode !== 'list') {
-        e.preventDefault();
-        if (viewMode === 'edit') setViewMode('view');
-        else { setViewMode('list'); setSelectedTicket(null); }
+        setViewMode('list');
+        setSelectedTicket(null);
         window.history.pushState(null, null, window.location.pathname);
       }
     };
 
-    window.history.pushState(null, null, window.location.pathname);
     window.addEventListener('popstate', handleBackButton);
     return () => window.removeEventListener('popstate', handleBackButton);
   }, [viewMode]);
@@ -1283,6 +1302,7 @@ function App() {
       const data = await response.json();
       if (data.status === 'success') {
         setViewMode('list');
+        setSelectedTicket(null);
         fetchData();
         fetchGroups();
       } else {
@@ -1553,6 +1573,60 @@ function App() {
     const [localBranchSuggestions, setLocalBranchSuggestions] = useState([]);
     const [showLocalSuggestions, setShowLocalSuggestions] = useState(false);
 
+    // Función reutilizable para estilos Fortune 500
+    const getFormGroupStyles = () => ({
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '16px',
+      padding: '1.5rem',
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+      position: 'relative',
+      overflow: 'hidden',
+      onMouseEnter: (e) => {
+        e.target.style.transform = 'translateY(-4px) scale(1.02)';
+        e.target.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+        e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+      },
+      onMouseLeave: (e) => {
+        e.target.style.transform = 'translateY(0) scale(1)';
+        e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+        e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+      }
+    });
+
+    // Función reutilizable para labels Fortune 500
+    const getLabelStyles = () => ({
+      display: 'block',
+      marginBottom: '0.8rem',
+      fontSize: '0.9rem',
+      fontWeight: '700',
+      color: '#e2e8f0',
+      letterSpacing: '0.025em',
+      textTransform: 'uppercase'
+    });
+
+    // Función reutilizable para inputs Fortune 500
+    const getInputStyles = () => ({
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.15)',
+      borderRadius: '12px',
+      padding: '0.75rem 1rem',
+      fontSize: '0.9rem',
+      fontWeight: '500',
+      color: '#ffffff',
+      transition: 'all 0.3s ease',
+      outline: 'none',
+      onFocus: (e) => {
+        e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+        e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+      },
+      onBlur: (e) => {
+        e.target.style.borderColor = 'rgba(255,255,255,0.15)';
+        e.target.style.boxShadow = 'none';
+      }
+    });
+
     // Función local para obtener sugerencias
     const fetchLocalBranchSuggestions = async (userName) => {
       if (!userName || userName.trim() === '') {
@@ -1806,27 +1880,44 @@ function App() {
             gap: '1.5rem',
             marginBottom: '2rem'
           }}>
-            <div className="form-group" style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              transition: 'all 0.3s ease'
-            }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.8rem',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#e2e8f0'
-              }}>Agente Principal</label>
+            <div className="form-group" style={getFormGroupStyles()}>
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
+              }}></div>
+              
+              <label style={getLabelStyles()}>Agente Principal</label>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <select
                   name="agent"
                   value={formData.agent || ''}
                   onChange={handleChange}
                   className="custom-input"
-                  style={{ borderLeft: `4px solid ${getAgentColor(formData.agent)}` }}
+                  style={{ 
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1rem',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    color: '#ffffff',
+                    transition: 'all 0.3s ease',
+                    outline: 'none',
+                    borderLeft: `4px solid ${getAgentColor(formData.agent)}`
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'rgba(255,255,255,0.15)';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 >
                   <option value="">-- Seleccionar Agente --</option>
                   {agents.map(a => <option key={a} value={a}>{a}</option>)}
@@ -1835,21 +1926,37 @@ function App() {
                 </select>
               </div>
             </div>
-            <div className="form-group" style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              transition: 'all 0.3s ease'
-            }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.8rem',
+            <div className="form-group" style={getFormGroupStyles()}>
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
+              }}></div>
+              
+              <label style={getLabelStyles()}>Estado</label>
+              <select name="status" value={formData.status || ''} onChange={handleChange} className="custom-input" style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '12px',
+                padding: '0.75rem 1rem',
                 fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#e2e8f0'
-              }}>Estado</label>
-              <select name="status" value={formData.status || ''} onChange={handleChange} className="custom-input">
+                fontWeight: '500',
+                color: '#ffffff',
+                transition: 'all 0.3s ease',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255,255,255,0.15)';
+                e.target.style.boxShadow = 'none';
+              }}>
                 <option value="Abierto">Abierto</option>
                 <option value="Cerrado">Cerrado</option>
                 <option value="En espera">En espera</option>
@@ -1858,25 +1965,42 @@ function App() {
                 <option value="Pendiente">Pendiente</option>
               </select>
             </div>
-            <div className="form-group" style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              transition: 'all 0.3s ease'
-            }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.8rem',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#e2e8f0'
-              }}>Usuario</label>
+            <div className="form-group" style={getFormGroupStyles()}>
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
+              }}></div>
+              
+              <label style={getLabelStyles()}>Usuario</label>
               <select 
                 name="user" 
                 value={formData.user || ''} 
                 onChange={handleChange}
                 className="custom-input"
+                style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '12px',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  color: '#ffffff',
+                  transition: 'all 0.3s ease',
+                  outline: 'none'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(255,255,255,0.15)';
+                  e.target.style.boxShadow = 'none';
+                }}
               >
                 <option value="">-- Seleccionar Usuario --</option>
                 {users.map(u => <option key={u} value={u}>{u}</option>)}
@@ -1884,21 +2008,37 @@ function App() {
                 <option value="new">+ Agregar Nuevo...</option>
               </select>
             </div>
-            <div className="form-group" style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              transition: 'all 0.3s ease'
-            }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.8rem',
+            <div className="form-group" style={getFormGroupStyles()}>
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
+              }}></div>
+              
+              <label style={getLabelStyles()}>Sucursal</label>
+              <select name="branch" value={formData.branch || ''} onChange={handleChange} className="custom-input" style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '12px',
+                padding: '0.75rem 1rem',
                 fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#e2e8f0'
-              }}>Sucursal</label>
-              <select name="branch" value={formData.branch || ''} onChange={handleChange} className="custom-input">
+                fontWeight: '500',
+                color: '#ffffff',
+                transition: 'all 0.3s ease',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255,255,255,0.15)';
+                e.target.style.boxShadow = 'none';
+              }}>
                 <option value="">-- Seleccionar Sucursal --</option>
                 {branches.map(b => <option key={b} value={b}>{b}</option>)}
                 {formData.branch && !branches.includes(formData.branch) && <option value={formData.branch}>{formData.branch}</option>}
@@ -1952,60 +2092,79 @@ function App() {
                 </div>
               )}
             </div>
-            <div className="form-group" style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              transition: 'all 0.3s ease'
-            }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.8rem',
+            <div className="form-group" style={getFormGroupStyles()}>
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
+              }}></div>
+              
+              <label style={getLabelStyles()}>SLA de Resolución</label>
+              <select name="sla_resolution" value={formData.sla_resolution || ''} onChange={handleChange} className="custom-input" style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '12px',
+                padding: '0.75rem 1rem',
                 fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#e2e8f0'
-              }}>SLA de Resolución</label>
-              <select name="sla_resolution" value={formData.sla_resolution || ''} onChange={handleChange} className="custom-input">
+                fontWeight: '500',
+                color: '#ffffff',
+                transition: 'all 0.3s ease',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255,255,255,0.15)';
+                e.target.style.boxShadow = 'none';
+              }}>
                 <option value="Correcto">Correcto</option>
                 <option value="Excedido">Excedido</option>
               </select>
             </div>
-            <div className="form-group" style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              transition: 'all 0.3s ease'
-            }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.8rem',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#e2e8f0'
-              }}>Fecha de Cierre</label>
+            <div className="form-group" style={getFormGroupStyles()}>
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
+              }}></div>
+              
+              <label style={getLabelStyles()}>Fecha de Cierre</label>
               <DatePicker
                 value={formData.close_date === 'None' ? '' : (formData.close_date || '')}
                 onChange={(value) => setFormData(prev => ({ ...prev, close_date: value }))}
                 placeholder="Seleccionar fecha de cierre"
+                style={{
+                  ...getInputStyles(),
+                  height: '48px',
+                  resize: 'none'
+                }}
               />
             </div>
             <div className="form-group" style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              transition: 'all 0.3s ease',
+              ...getFormGroupStyles(),
               gridColumn: 'span 3'
             }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.8rem',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#e2e8f0'
-              }}>Colaboradores</label>
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
+              }}></div>
+              
+              <label style={getLabelStyles()}>Colaboradores</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <select
@@ -2013,6 +2172,25 @@ function App() {
                     onChange={handleChange}
                     className="custom-input"
                     value=""
+                    style={{
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '12px',
+                      padding: '0.75rem 1rem',
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      color: '#ffffff',
+                      transition: 'all 0.3s ease',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'rgba(255,255,255,0.15)';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   >
                     <option value="">-- Agregar Colaborador --</option>
                     {agents.map(a => <option key={a} value={a}>{a}</option>)}
@@ -2042,26 +2220,30 @@ function App() {
               </div>
             </div>
             <div className="form-group" style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              transition: 'all 0.3s ease',
+              ...getFormGroupStyles(),
               gridColumn: 'span 3'
             }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.8rem',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                color: '#e2e8f0'
-              }}>Detalles / Notas</label>
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
+              }}></div>
+              
+              <label style={getLabelStyles()}>Detalles / Notas</label>
               <textarea 
                 name="details" 
                 value={formData.details || ''} 
                 onChange={handleChange} 
                 className="custom-input" 
-                style={{ height: '120px' }}
+                style={{ 
+                  ...getInputStyles(),
+                  height: '120px',
+                  resize: 'vertical'
+                }}
                 placeholder="Sin detalle..."
               ></textarea>
             </div>
@@ -2077,23 +2259,47 @@ function App() {
                 color: '#22c55e',
                 borderRadius: '12px',
                 padding: '1rem 3rem',
-                fontWeight: '600',
-                transition: 'all 0.3s ease',
+                fontWeight: '700',
+                fontSize: '1rem',
+                letterSpacing: '0.025em',
+                textTransform: 'uppercase',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(34, 197, 94, 0.1)'
+                boxShadow: '0 4px 6px -1px rgba(34, 197, 94, 0.1), 0 2px 4px -1px rgba(34, 197, 94, 0.06)',
+                position: 'relative',
+                overflow: 'hidden'
               }}
               onMouseEnter={(e) => {
                 e.target.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.15))';
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 8px 25px rgba(34, 197, 94, 0.2)';
+                e.target.style.transform = 'translateY(-4px) scale(1.02)';
+                e.target.style.boxShadow = '0 20px 25px -5px rgba(34, 197, 94, 0.15), 0 10px 10px -5px rgba(34, 197, 94, 0.04)';
+                e.target.style.borderColor = 'rgba(34, 197, 94, 0.3)';
               }}
               onMouseLeave={(e) => {
                 e.target.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))';
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 15px rgba(34, 197, 94, 0.1)';
+                e.target.style.transform = 'translateY(0) scale(1)';
+                e.target.style.boxShadow = '0 4px 6px -1px rgba(34, 197, 94, 0.1), 0 2px 4px -1px rgba(34, 197, 94, 0.06)';
+                e.target.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+              }}
+              onFocus={(e) => {
+                e.target.style.outline = '2px solid rgba(34, 197, 94, 0.5)';
+                e.target.style.outlineOffset = '2px';
+              }}
+              onBlur={(e) => {
+                e.target.style.outline = 'none';
               }}
             >
-              <i className="fas fa-save"></i> Guardar Cambios
+              {/* Subtle gradient overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.3), transparent)'
+              }}></div>
+              
+              <i className="fas fa-save" style={{ marginRight: '0.5rem' }}></i> Guardar Cambios
             </button>
           </div>
         </form>
@@ -4834,7 +5040,7 @@ function App() {
           return <TicketDetailView ticket={selectedTicket} onEdit={() => setViewMode('edit')} onBack={() => { setViewMode('list'); setSelectedTicket(null); }} />;
         }
         if (viewMode === 'edit' && selectedTicket) {
-          return <TicketEditView ticket={selectedTicket} onSave={handleSaveTicket} onBack={() => setViewMode('view')} />;
+          return <TicketEditView ticket={selectedTicket} onSave={handleSaveTicket} onBack={() => { setViewMode('list'); setSelectedTicket(null); }} />;
         }
         if (viewMode === 'create') {
           return <TicketCreateView onSuccess={() => {

@@ -802,6 +802,8 @@ body {
   font-family: inherit;
   font-size: 1rem;
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .custom-input:focus {
@@ -811,8 +813,32 @@ body {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
+select.custom-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
+  padding-right: 3rem;
+  cursor: pointer;
+}
+
+select.custom-input:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+select.custom-input:focus {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
 select.custom-input option {
   background: #0f172a;
+  color: white;
+  padding: 0.5rem;
+}
+
+select.custom-input option:hover {
+  background: rgba(59, 130, 246, 0.2);
 }
 
 /* Monitoreo de Servidores - Dual Layout */
@@ -1116,6 +1142,24 @@ select.custom-input option {
   backdrop-filter: blur(20px);
   z-index: 1000;
   animation: fadeIn 0.3s ease;
+}
+
+.date-picker-calendar.custom-datepicker-small {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 280px !important;
+  height: auto !important;
+  font-size: 0.8rem !important;
+  z-index: 9999 !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  padding: 1rem !important;
+  margin: 0 !important;
 }
 
 @keyframes fadeIn {
@@ -2327,4 +2371,204 @@ select.custom-input option {
 
 .sla-bounce {
   animation: bounce 2s infinite;
+}
+
+/* Estilos personalizados para DatePicker pequeño */
+.custom-datepicker-small {
+  width: 280px !important;
+  height: 280px !important;
+  font-size: 0.8rem !important;
+  position: fixed !important;
+  z-index: 9999 !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  padding: 1rem !important;
+}
+
+.custom-datepicker-small .calendar-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 1rem !important;
+  padding: 0.5rem !important;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05)) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2) !important;
+  border-radius: 12px !important;
+}
+
+.custom-datepicker-small .calendar-title {
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  color: #8b5cf6 !important;
+  margin: 0 !important;
+}
+
+.custom-datepicker-small .calendar-nav {
+  display: flex !important;
+  gap: 0.5rem !important;
+}
+
+.custom-datepicker-small .calendar-btn {
+  width: 24px !important;
+  height: 24px !important;
+  border: none !important;
+  background: rgba(139, 92, 246, 0.1) !important;
+  color: #8b5cf6 !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  font-size: 1rem !important;
+}
+
+.custom-datepicker-small .calendar-btn:hover {
+  background: rgba(139, 92, 246, 0.2) !important;
+  transform: scale(1.1) !important;
+}
+
+.custom-datepicker-small .calendar-weekdays {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 0.25rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.custom-datepicker-small .calendar-weekday {
+  text-align: center !important;
+  font-size: 0.7rem !important;
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+  padding: 0.25rem !important;
+}
+
+.custom-datepicker-small .calendar-days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 0.25rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.custom-datepicker-small .calendar-day {
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.75rem !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  background: transparent !important;
+  color: white !important;
+}
+
+.custom-datepicker-small .calendar-day:hover {
+  background: rgba(139, 92, 246, 0.2) !important;
+  transform: scale(1.05) !important;
+}
+
+.custom-datepicker-small .calendar-day.selected {
+  background: #8b5cf6 !important;
+  color: white !important;
+  box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.3) !important;
+}
+
+.custom-datepicker-small .calendar-day.other-month {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.custom-datepicker-small .calendar-day.today {
+  border: 1px solid #8b5cf6 !important;
+}
+
+.custom-datepicker-small .calendar-footer {
+  display: flex !important;
+  justify-content: space-between !important;
+  padding-top: 0.5rem !important;
+  border-top: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+.custom-datepicker-small .calendar-today,
+.custom-datepicker-small .calendar-close {
+  padding: 0.5rem 1rem !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 0.75rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.custom-datepicker-small .calendar-today {
+  background: rgba(139, 92, 246, 0.1) !important;
+  color: #8b5cf6 !important;
+}
+
+.custom-datepicker-small .calendar-close {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+}
+
+.custom-datepicker-small .calendar-today:hover {
+  background: rgba(139, 92, 246, 0.2) !important;
+}
+
+.custom-datepicker-small .calendar-close:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Responsive para calendario */
+@media (max-width: 768px) {
+  .date-picker-calendar.custom-datepicker-small {
+    width: 260px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .date-picker-calendar.custom-datepicker-small .calendar-day {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.7rem !important;
+  }
+  
+  .date-picker-calendar.custom-datepicker-small .calendar-title {
+    font-size: 0.8rem !important;
+  }
+  
+  .date-picker-calendar.custom-datepicker-small .calendar-weekday {
+    font-size: 0.65rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .date-picker-calendar.custom-datepicker-small {
+    width: 240px !important;
+    font-size: 0.7rem !important;
+  }
+  
+  .date-picker-calendar.custom-datepicker-small .calendar-day {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 0.65rem !important;
+  }
+  
+  .date-picker-calendar.custom-datepicker-small .calendar-title {
+    font-size: 0.75rem !important;
+  }
+  
+  .date-picker-calendar.custom-datepicker-small .calendar-weekday {
+    font-size: 0.6rem !important;
+  }
+}
+
+/* Estilos para el popper del DatePicker */
+.custom-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+.custom-datepicker-popper .react-datepicker-popper {
+  position: fixed !important;
+  transform: none !important;
+  top: auto !important;
+  left: auto !important;
 }
