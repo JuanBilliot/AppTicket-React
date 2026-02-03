@@ -645,6 +645,10 @@ function App() {
     // Buscar en colaboradores (con seguridad para null/undefined)
     if (ticket.collaborators && ticket.collaborators.toLowerCase().includes(searchLower)) return true;
     
+    // Buscar en departamento (con seguridad para null/undefined) - incluyendo guardados localmente
+    const ticketDept = ticket.department || getTicketDepartment(ticket.id);
+    if (ticketDept && ticketDept.toLowerCase().includes(searchLower)) return true;
+    
     // Buscar en detalles (con seguridad para null/undefined)
     if (ticket.details && ticket.details.toLowerCase().includes(searchLower)) return true;
     
@@ -667,6 +671,7 @@ function App() {
   const [agents, setAgents] = useState([]);
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [settingsTab, setSettingsTab] = useState('users');
   const [settingsUsers, setSettingsUsers] = useState([]);
   const [settingsBranches, setSettingsBranches] = useState([]);
@@ -720,6 +725,8 @@ function App() {
   useEffect(() => {
     fetchData();
     fetchGroups();
+    fetchBranches();
+    fetchDepartments();
     const interval = setInterval(() => {
       if (viewMode !== 'edit') {
         fetchData();
@@ -1261,6 +1268,380 @@ function App() {
     }
   };
 
+  const fetchBranches = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/branches`);
+      const data = await response.json();
+      setBranches(data.branches || []);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    }
+  };
+
+  // Función para asignar íconos únicos a departamentos
+  const getDepartmentIcon = (departmentName) => {
+    if (!departmentName || departmentName === 'Sin depto') return 'fas fa-building';
+    
+    // Mapeo de íconos por patrones de nombres de departamentos
+    const iconPatterns = {
+      // TI / Sistemas / Soporte Técnico
+      'ti': 'fas fa-laptop-code',
+      'soporte técnico': 'fas fa-headset',
+      'soporte': 'fas fa-headset',
+      'informática': 'fas fa-desktop',
+      'sistemas': 'fas fa-server',
+      'sistema de gestión': 'fas fa-server',
+      'sistema gestion': 'fas fa-server',
+      'gestion': 'fas fa-server',
+      'tecnología': 'fas fa-microchip',
+      'it': 'fas fa-laptop',
+      'help desk': 'fas fa-life-ring',
+      'desarrollo': 'fas fa-code',
+      'programación': 'fas fa-terminal',
+      
+      // RRHH / Personal
+      'rrhh': 'fas fa-users',
+      'recursos humanos': 'fas fa-users',
+      'personal': 'fas fa-user-tie',
+      'rh': 'fas fa-users',
+      'talento humano': 'fas fa-user-friends',
+      
+      // Contabilidad / Finanzas
+      'contabilidad': 'fas fa-calculator',
+      'finanzas': 'fas fa-chart-line',
+      'administración': 'fas fa-briefcase',
+      'facturación': 'fas fa-file-invoice-dollar',
+      'tesorería': 'fas fa-money-bill-wave',
+      'contable': 'fas fa-receipt',
+      
+      // Ventas / Comercial
+      'ventas': 'fas fa-shopping-cart',
+      'comercial': 'fas fa-handshake',
+      'sales': 'fas fa-chart-bar',
+      'negocios': 'fas fa-bullhorn',
+      
+      // Logística / Almacén
+      'logística': 'fas fa-truck',
+      'almacén': 'fas fa-warehouse',
+      'depósito': 'fas fa-boxes',
+      'stock': 'fas fa-box',
+      'distribución': 'fas fa-shipping-fast',
+      
+      // Marketing / Publicidad
+      'marketing': 'fas fa-bullhorn',
+      'publicidad': 'fas fa-ad',
+      'comunicación': 'fas fa-comments',
+      'social media': 'fas fa-share-alt',
+      'diseño': 'fas fa-palette',
+      
+      // Operaciones / Producción
+      'operaciones': 'fas fa-cogs',
+      'producción': 'fas fa-industry',
+      'calidad': 'fas fa-award',
+      'manufactura': 'fas fa-tools',
+      
+      // Legal / Jurídico
+      'legal': 'fas fa-balance-scale',
+      'jurídico': 'fas fa-gavel',
+      'abogados': 'fas fa-scale-balanced',
+      
+      // Médico / Salud
+      'médico': 'fas fa-stethoscope',
+      'salud': 'fas fa-heartbeat',
+      'enfermería': 'fas fa-user-nurse',
+      
+      // Educación / Capacitación
+      'educación': 'fas fa-graduation-cap',
+      'capacitación': 'fas fa-chalkboard-teacher',
+      'academia': 'fas fa-book',
+      
+      // Seguridad
+      'seguridad': 'fas fa-shield-alt',
+      'vigilancia': 'fas fa-user-shield',
+      
+      // Investigación / I+D
+      'investigación': 'fas fa-microscope',
+      'i+d': 'fas fa-flask',
+      'desarrollo': 'fas fa-lightbulb',
+      
+      // Cliente / Atención
+      'cliente': 'fas fa-user-check',
+      'atención': 'fas fa-concierge-bell',
+      'servicio': 'fas fa-concierge-bell'
+    };
+    
+    // Buscar coincidencia exacta primero
+    const deptLower = departmentName.toLowerCase();
+    if (iconPatterns[deptLower]) {
+      return iconPatterns[deptLower];
+    }
+    
+    // Buscar coincidencias parciales
+    for (const [pattern, icon] of Object.entries(iconPatterns)) {
+      if (deptLower.includes(pattern)) {
+        return icon;
+      }
+    }
+    
+    // Ícono por defecto basado en la primera letra
+    const firstLetter = departmentName.charAt(0).toUpperCase();
+    const defaultIcons = {
+      'A': 'fas fa-alpha',
+      'B': 'fas fa-beta', 
+      'C': 'fas fa-chart-pie',
+      'D': 'fas fa-database',
+      'E': 'fas fa-envelope',
+      'F': 'fas fa-folder',
+      'G': 'fas fa-gear',
+      'H': 'fas fa-home',
+      'I': 'fas fa-info-circle',
+      'J': 'fas fa-journal-whills',
+      'K': 'fas fa-key',
+      'L': 'fas fa-list',
+      'M': 'fas fa-map',
+      'N': 'fas fa-network-wired',
+      'O': 'fas fa-organization',
+      'P': 'fas fa-project-diagram',
+      'Q': 'fas fa-question-circle',
+      'R': 'fas fa-robot',
+      'S': 'fas fa-star',
+      'T': 'fas fa-tag',
+      'U': 'fas fa-user',
+      'V': 'fas fa-video',
+      'W': 'fas fa-wifi',
+      'X': 'fas fa-xmark',
+      'Y': 'fas fa-yin-yang',
+      'Z': 'fas fa-zip'
+    };
+    
+    return defaultIcons[firstLetter] || 'fas fa-building';
+  };
+
+  // Función para asignar colores únicos a departamentos
+  const getDepartmentColor = (departmentName) => {
+    if (!departmentName || departmentName === 'Sin depto') return '#6b7280';
+    
+    // Debug: Mostrar el nombre exacto del departamento
+    console.log('🎨 [DEBUG] Departamento solicitado:', `"${departmentName}"`);
+    
+    // FORZAR COLOR MOSTAZA PARA CUALQUIER VARIANTE DE SISTEMA/GESTIÓN
+    const deptLower = departmentName.toLowerCase().trim();
+    console.log('🎨 [DEBUG] Departamento normalizado:', `"${deptLower}"`);
+    
+    if (
+      deptLower.includes('sistema') || 
+      deptLower.includes('gestion') || 
+      deptLower.includes('gestión') ||
+      deptLower.includes('sistemas')
+    ) {
+      console.log('🎨 [DEBUG] DETECTADO SISTEMA/GESTIÓN - FORZANDO COLOR MOSTAZA #d97706');
+      return '#d97706';
+    }
+    
+    // Colores específicos para departamentos conocidos
+    const specificColors = {
+      'ti': '#ccaa14ff', // Azul brillante
+      'soporte técnico': '#16b7d3ff', // Cian brillante
+      'soporte': '#06b6d4', // Cian brillante
+      'informática': '#3b82f6', // Azul brillante
+      'rrhh': '#10b981', // Verde esmeralda
+      'recursos humanos': '#10b981', // Verde esmeralda
+      'personal': '#10b981', // Verde esmeralda
+      'contabilidad': '#f59e0b', // Ámbar dorado
+      'finanzas': '#f59e0b', // Ámbar dorado
+      'administración': '#f59e0b', // Ámbar dorado
+      'ventas': '#ef4444', // Rojo vibrante
+      'comercial': '#ef4444', // Rojo vibrante
+      'logística': '#f97316', // Naranja brillante
+      'almacén': '#f97316', // Naranja brillante
+      'marketing': '#ec4899', // Rosa fucsia
+      'publicidad': '#ec4899', // Rosa fucsia
+      'operaciones': '#8b5cf6', // Púrpura real
+      'producción': '#8b5cf6', // Púrpura real
+      'calidad': '#8b5cf6', // Púrpura real
+      'legal': '#6366f1', // Índigo
+      'jurídico': '#6366f1', // Índigo
+      'médico': '#ef4444', // Rojo vibrante
+      'salud': '#ef4444', // Rojo vibrante
+      'educación': '#eab308', // Amarillo mostaza
+      'capacitación': '#eab308', // Amarillo mostaza
+      'seguridad': '#0aa014ff', // Verde oliva
+      'investigación': '#14b8a6', // Verde azulado
+      'cliente': '#f43f5e', // Rosa rojo
+      'atención': '#f43f5e', // Rosa rojo
+      'servicio': '#f43f5e' // Rosa rojo
+    };
+    
+    // Buscar coincidencia exacta primero
+    if (specificColors[deptLower]) {
+      console.log('🎨 [DEBUG] Color encontrado en specificColors:', specificColors[deptLower]);
+      return specificColors[deptLower];
+    }
+    
+    // Buscar coincidencias parciales
+    for (const [pattern, color] of Object.entries(specificColors)) {
+      if (deptLower.includes(pattern)) {
+        console.log('🎨 [DEBUG] Color encontrado por coincidencia parcial:', pattern, color);
+        return color;
+      }
+    }
+    
+    console.log('🎨 [DEBUG] No se encontró color específico, usando hash aleatorio');
+    
+    // Lista de colores vibrantes y distinguibles para departamentos
+    const departmentColors = [
+      '#3b82f6', // Azul brillante
+      '#10b981', // Verde esmeralda
+      '#f59e0b', // Ámbar dorado
+      '#ef4444', // Rojo vibrante
+      '#8b5cf6', // Púrpura real
+      '#ec4899', // Rosa fucsia
+      '#06b6d4', // Cian brillante
+      '#84cc16', // Lima verde
+      '#f97316', // Naranja brillante
+      '#6366f1', // Índigo
+      '#14b8a6', // Verde azulado
+      '#a855f7', // Violeta
+      '#eab308', // Amarillo mostaza
+      '#f43f5e', // Rosa rojo
+      '#0ea5e9', // Azul cielo
+      '#d946ef', // Magenta
+      '#0891b2', // Azul turquesa
+      '#65a30d', // Verde oliva
+      '#dc2626', // Rojo tomate
+      '#7c3aed', // Púrpura oscuro
+      '#db2777', // Rosa intenso
+      '#0284c7', // Azul océano
+      '#16a34a', // Verde bosque
+      '#ea580c', // Naranja quemado
+      '#4f46e5', // Azul medianoche
+      '#059669', // Verde mar
+      '#9333ea', // Violeta profundo
+      '#ca8a04', // Amarillo dorado
+      '#e11d48', // Rosa coral
+      '#0369a1', // Azul profundo
+      '#15803d'  // Verde oscuro
+    ];
+    
+    // Crear un mapa de colores asignados para departamentos
+    if (!window.departmentColorMap) {
+      window.departmentColorMap = {};
+    }
+    
+    // Si ya tenemos un color asignado para este departamento, retornarlo
+    if (window.departmentColorMap[departmentName]) {
+      console.log('🎨 [DEBUG] Color encontrado en mapa:', window.departmentColorMap[departmentName]);
+      return window.departmentColorMap[departmentName];
+    }
+    
+    // Generar hash consistente para el nombre del departamento
+    let hash = 0;
+    for (let i = 0; i < departmentName.length; i++) {
+      hash = departmentName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Seleccionar color basado en hash para consistencia
+    const colorIndex = Math.abs(hash) % departmentColors.length;
+    const selectedColor = departmentColors[colorIndex];
+    
+    // Guardar en el mapa para reutilización
+    window.departmentColorMap[departmentName] = selectedColor;
+    
+    console.log('🎨 [DEBUG] Color generado por hash:', selectedColor);
+    return selectedColor;
+  };
+
+  // Prueba directa de la función
+  console.log('🧪 [TEST] Probando getDepartmentColor con "SISTEMA DE GESTIÓN":', getDepartmentColor('SISTEMA DE GESTIÓN'));
+  console.log('🧪 [TEST] Probando getDepartmentColor con "Sistema de Gestion":', getDepartmentColor('Sistema de Gestion'));
+  console.log('🧪 [TEST] Probando getDepartmentColor con "sistema":', getDepartmentColor('sistema'));
+  console.log('🧪 [TEST] Probando getDepartmentColor con "gestion":', getDepartmentColor('gestion'));
+
+  // Función para sugerir departamento automáticamente basado en usuario/agente
+  const suggestDepartment = (userName, agentName) => {
+    if (!userName && !agentName) return '';
+    
+    // Lógica de sugerencia basada en patrones conocidos
+    const userLower = (userName || '').toLowerCase();
+    const agentLower = (agentName || '').toLowerCase();
+    
+    // Patrones de departamento basados en nombres
+    const departmentPatterns = {
+      // TI / Sistemas
+      'soporte técnico': 'TI',
+      'informática': 'TI',
+      'sistemas': 'TI',
+      'tecnología': 'TI',
+      'it': 'TI',
+      'help desk': 'TI',
+      
+      // RRHH
+      'recursos humanos': 'RRHH',
+      'personal': 'RRHH',
+      'rrhh': 'RRHH',
+      'rh': 'RRHH',
+      
+      // Contabilidad / Finanzas
+      'contabilidad': 'Contabilidad',
+      'finanzas': 'Contabilidad',
+      'administración': 'Contabilidad',
+      'facturación': 'Contabilidad',
+      
+      // Ventas
+      'ventas': 'Ventas',
+      'comercial': 'Ventas',
+      'sales': 'Ventas',
+      
+      // Logística
+      'logística': 'Logística',
+      'almacén': 'Logística',
+      'depósito': 'Logística',
+      'stock': 'Logística',
+      
+      // Marketing
+      'marketing': 'Marketing',
+      'publicidad': 'Marketing',
+      'comunicación': 'Marketing',
+      
+      // Operaciones
+      'operaciones': 'Operaciones',
+      'producción': 'Operaciones',
+      'calidad': 'Operaciones'
+    };
+    
+    // Buscar patrones en el nombre de usuario
+    for (const [pattern, dept] of Object.entries(departmentPatterns)) {
+      if (userLower.includes(pattern) || agentLower.includes(pattern)) {
+        return dept;
+      }
+    }
+    
+    // Si no hay patrón conocido, devolver vacío
+    return '';
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      // Por ahora, usar solo datos locales hasta que el backend tenga el endpoint
+      console.log('🏢 [INFO] Cargando departamentos desde datos locales (endpoint no disponible)');
+      
+      // Cargar departamentos guardados en localStorage si existen
+      const savedDepartments = localStorage.getItem('local_departments');
+      if (savedDepartments) {
+        const depts = JSON.parse(savedDepartments);
+        console.log('🏢 [INFO] Departamentos cargados desde localStorage:', depts.length);
+        setDepartments(depts);
+      } else {
+        console.log('🏢 [INFO] Sin departamentos guardados, iniciando vacío');
+        setDepartments([]);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      // En caso de error, empezar con array vacío
+      setDepartments([]);
+    }
+  };
+
   const fetchServersData = async () => {
     try {
       const response = await fetch(`${API_BASE}/api/servers`);
@@ -1330,8 +1711,44 @@ function App() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Función para guardar departamento asignado a un ticket localmente
+  const saveTicketDepartment = (ticketId, department) => {
+    try {
+      const ticketDepartments = JSON.parse(localStorage.getItem('ticket_departments') || '{}');
+      if (department) {
+        ticketDepartments[ticketId] = department;
+      } else {
+        delete ticketDepartments[ticketId];
+      }
+      localStorage.setItem('ticket_departments', JSON.stringify(ticketDepartments));
+      console.log('🎫 [DEBUG] Departamento guardado para ticket', ticketId, ':', department);
+    } catch (error) {
+      console.error('Error guardando departamento de ticket:', error);
+    }
+  };
+
+  // Función para obtener departamento asignado a un ticket
+  const getTicketDepartment = (ticketId) => {
+    try {
+      const ticketDepartments = JSON.parse(localStorage.getItem('ticket_departments') || '{}');
+      const dept = ticketDepartments[ticketId] || '';
+      console.log('🎫 [DEBUG] Departamento para ticket', ticketId, ':', `"${dept}"`);
+      return dept;
+    } catch (error) {
+      console.error('Error obteniendo departamento de ticket:', error);
+      return '';
+    }
+  };
+
   const handleSaveTicket = async (updatedTicket) => {
     try {
+      // Debug: Verificar qué datos se están guardando
+      console.log('🎫 [DEBUG] Guardando ticket con datos:', updatedTicket);
+      console.log('🎫 [DEBUG] Departamento:', updatedTicket.department);
+      
+      // Guardar departamento localmente (independientemente del backend)
+      saveTicketDepartment(updatedTicket.id, updatedTicket.department);
+      
       const response = await fetch(`${API_BASE}/api/tickets/${updatedTicket.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1760,7 +2177,7 @@ function App() {
               </div>
             </div>
 
-            {/* SLA */}
+            {/* Departamento */}
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ 
                 display: 'block', 
@@ -1769,10 +2186,27 @@ function App() {
                 color: '#94a3b8',
                 fontWeight: '600'
               }}>
-                Estado SLA
+                Departamento
               </label>
-              <span className={`sla-badge ${ticket.sla_resolution?.toLowerCase() === 'correcto' ? 'sla-ok' : 'sla-warn'}`}>
-                {ticket.sla_resolution || 'N/A'}
+              <span style={{
+                background: (ticket.department || getTicketDepartment(ticket.id)) ? 
+                  `${getDepartmentColor(ticket.department || getTicketDepartment(ticket.id))}20` : 'rgba(107, 114, 128, 0.2)',
+                color: (ticket.department || getTicketDepartment(ticket.id)) ? 
+                  getDepartmentColor(ticket.department || getTicketDepartment(ticket.id)) : '#6b7280',
+                border: (ticket.department || getTicketDepartment(ticket.id)) ? 
+                  `1px solid ${getDepartmentColor(ticket.department || getTicketDepartment(ticket.id))}40` : '1px solid rgba(107, 114, 128, 0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                <i className={getDepartmentIcon(ticket.department || getTicketDepartment(ticket.id))} style={{ fontSize: '0.6rem' }}></i>
+                {ticket.department || getTicketDepartment(ticket.id) || 'Sin depto'}
               </span>
             </div>
 
@@ -1810,7 +2244,8 @@ function App() {
   const TicketEditView = ({ ticket, onSave, onBack }) => {
     const [formData, setFormData] = useState({ 
       ...ticket,
-      details: ticket.details && ticket.details !== 'Sin detalle...' ? ticket.details : ''
+      details: ticket.details && ticket.details !== 'Sin detalle...' ? ticket.details : '',
+      department: ticket.department || getTicketDepartment(ticket.id) || ''
     });
     const [localBranchSuggestions, setLocalBranchSuggestions] = useState([]);
     const [showLocalSuggestions, setShowLocalSuggestions] = useState(false);
@@ -1905,10 +2340,21 @@ function App() {
       }
     }, [formData.user]);
 
+    // Efecto para sugerir departamento automáticamente cuando cambia usuario o agente
+    useEffect(() => {
+      if (formData.user || formData.agent) {
+        const suggestedDept = suggestDepartment(formData.user, formData.agent);
+        if (suggestedDept && !formData.department) {
+          // Solo sugerir si no hay departamento ya seleccionado
+          setFormData(prev => ({ ...prev, department: suggestedDept }));
+        }
+      }
+    }, [formData.user, formData.agent]);
+
     const handleChange = (e) => {
       const { name, value } = e.target;
       if (value === 'new') {
-        const labels = { 'agent': 'Agente', 'branch': 'Sucursal', 'user': 'Usuario', 'collaborators_select': 'Colaborador' };
+        const labels = { 'agent': 'Agente', 'branch': 'Sucursal', 'user': 'Usuario', 'collaborators_select': 'Colaborador', 'department': 'Departamento' };
         const label = labels[name] || name;
         const newValue = prompt(`Ingrese el nombre del nuevo ${label}:`);
         if (newValue) {
@@ -1916,6 +2362,20 @@ function App() {
             const current = formData.collaborators && formData.collaborators !== 'None' ? formData.collaborators : '';
             const updated = current ? `${current}, ${newValue}` : newValue;
             setFormData(prev => ({ ...prev, collaborators: updated }));
+          } else if (name === 'department') {
+            // Agregar departamento a la lista local y guardar
+            const newDept = {
+              id: Date.now(), // ID único basado en timestamp
+              name: newValue
+            };
+            setDepartments(prev => {
+              const updated = [...prev, newDept];
+              // Guardar en localStorage
+              localStorage.setItem('local_departments', JSON.stringify(updated));
+              console.log('🏢 [INFO] Departamento agregado y guardado:', newValue);
+              return updated;
+            });
+            setFormData(prev => ({ ...prev, department: newValue }));
           } else {
             setFormData(prev => ({ ...prev, [name]: newValue }));
           }
@@ -2345,8 +2805,8 @@ function App() {
                 background: 'linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent)'
               }}></div>
               
-              <label style={getLabelStyles()}>SLA de Resolución</label>
-              <select name="sla_resolution" value={formData.sla_resolution || ''} onChange={handleChange} className="custom-input" style={{
+              <label style={getLabelStyles()}>Departamento</label>
+              <select name="department" value={formData.department || ''} onChange={handleChange} className="custom-input" style={{
                 background: 'rgba(255,255,255,0.02)',
                 border: '1px solid rgba(255,255,255,0.15)',
                 borderRadius: '12px',
@@ -2365,9 +2825,86 @@ function App() {
                 e.target.style.borderColor = 'rgba(255,255,255,0.15)';
                 e.target.style.boxShadow = 'none';
               }}>
-                <option value="Correcto">Correcto</option>
-                <option value="Excedido">Excedido</option>
+                <option value="">Seleccionar departamento...</option>
+                {departments.length === 0 ? (
+                  <option value="" disabled>No hay departamentos configurados</option>
+                ) : (
+                  <>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                    {formData.department && !departments.find(d => d.name === formData.department) && (
+                      <option value={formData.department}>
+                        {formData.department}
+                      </option>
+                    )}
+                  </>
+                )}
+                <option value="new">+ Agregar Nuevo...</option>
               </select>
+              
+              {/* Mensaje cuando no hay departamentos */}
+              {departments.length === 0 && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '10px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  color: '#60a5fa'
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fas fa-info-circle"></i>
+                    Sin departamentos configurados
+                  </div>
+                  <div>
+                    Usa la opción "+ Agregar Nuevo..." para crear tu primer departamento
+                  </div>
+                </div>
+              )}
+              
+              {/* Sugerencia automática de departamento */}
+              {(formData.user || formData.agent) && suggestDepartment(formData.user, formData.agent) && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '10px',
+                  background: `${getDepartmentColor(suggestDepartment(formData.user, formData.agent))}15`,
+                  border: `1px solid ${getDepartmentColor(suggestDepartment(formData.user, formData.agent))}30`,
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  color: getDepartmentColor(suggestDepartment(formData.user, formData.agent))
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className={getDepartmentIcon(suggestDepartment(formData.user, formData.agent))}></i>
+                    Sugerencia automática
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>
+                      Departamento sugerido: <strong>{suggestDepartment(formData.user, formData.agent)}</strong>
+                    </span>
+                    {formData.department !== suggestDepartment(formData.user, formData.agent) && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, department: suggestDepartment(formData.user, formData.agent) }))}
+                        style={{
+                          background: `${getDepartmentColor(suggestDepartment(formData.user, formData.agent))}25`,
+                          border: `1px solid ${getDepartmentColor(suggestDepartment(formData.user, formData.agent))}50`,
+                          color: getDepartmentColor(suggestDepartment(formData.user, formData.agent)),
+                          borderRadius: '4px',
+                          padding: '2px 8px',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Usar sugerencia
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="form-group" style={getFormGroupStyles()}>
               {/* Subtle gradient overlay */}
@@ -5421,7 +5958,7 @@ function App() {
                     <th>Usuario / Sucursal</th>
                     <th>Estado</th>
                     <th>Agente / Colaboradores</th>
-                    <th>SLA</th>
+                    <th>Departamento</th>
                     <th>Demora</th>
                     <th>Acciones</th>
                   </tr>
@@ -5484,12 +6021,33 @@ function App() {
                         </div>
                       </td>
                       <td>
-                        <SLAIndicator 
-                          creationDate={ticket.creation_date}
-                          closeDate={ticket.close_date}
-                          details={ticket.details}
-                          type={ticket.type}
-                        />
+                        {(() => {
+                          const deptName = ticket.department || getTicketDepartment(ticket.id);
+                          const deptColor = getDepartmentColor(deptName);
+                          console.log('🏷️ [TABLE DEBUG] Ticket:', ticket.ticket_number, 'Departamento:', `"${deptName}"`, 'Color:', deptColor);
+                          return (
+                            <span style={{
+                              background: deptName ? 
+                                `${deptColor}20` : 'rgba(107, 114, 128, 0.2)',
+                              color: deptName ? 
+                                deptColor : '#6b7280',
+                              border: deptName ? 
+                                `1px solid ${deptColor}40` : '1px solid rgba(107, 114, 128, 0.3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '6px 12px',
+                              borderRadius: '20px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}>
+                              <i className={getDepartmentIcon(deptName)} style={{ fontSize: '0.6rem' }}></i>
+                              {deptName || 'Sin depto'}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td>
                         <span className={`delay-badge delay-${getDelayClass(ticket.delay)}`}
