@@ -676,6 +676,8 @@ function App() {
   const [settingsUsers, setSettingsUsers] = useState([]);
   const [settingsBranches, setSettingsBranches] = useState([]);
   const [settingsAgents, setSettingsAgents] = useState([]);
+  const [settingsDepartments, setSettingsDepartments] = useState([]);
+  const [hiddenDepartments, setHiddenDepartments] = useState([]);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsNewName, setSettingsNewName] = useState('');
@@ -800,6 +802,14 @@ function App() {
       setSettingsUsers(Array.isArray(uJ) ? uJ : []);
       setSettingsBranches(Array.isArray(bJ) ? bJ : []);
       setSettingsAgents(Array.isArray(aJ) ? aJ : []);
+      
+      // Cargar departamentos desde localStorage
+      const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
+      setSettingsDepartments(savedDepartments);
+      
+      // Cargar departamentos ocultos
+      const hidden = JSON.parse(localStorage.getItem('hidden_departments') || '[]');
+      setHiddenDepartments(hidden);
     } catch (e) {
       setSettingsError('No se pudo cargar Configuración');
       console.error(e);
@@ -832,12 +842,32 @@ function App() {
   const getAgentColor = (agentName) => {
     if (!agentName || agentName === 'Sin agente') return '#6b7280';
     
+    // COLORES ESPECÍFICOS PARA AGENTES - Formato: Apellido, Nombre: Color
+    const specificAgentColors = {
+      'Macia, Nicolas': '#f18056ff', // Naranja vibrante
+      'Arbello, Mauro': '#9333ea', // Púrpura real
+      'Rodriguez, Guillermo': '#71c7e9ff', // Azul brillante
+      'Billiot, Juan M': '#f4e04d', // Amarillo pastel suave
+      'Gonzalez, David': '#10b981', // Verde esmeralda
+      'Rognoni, Leandro': '#ec4899', // Rosa fucsia
+      'Ulariaga, Braian': '#05a3bfff', // Cian brillante
+      'Marini, Claudio': '#f59e0b', // Ámbar dorado
+      'Machado, Gabriel': '#e73535ff', // Rojo vibrante
+      'Karpilovsky, Ivan': '#8b5cf6', // Púrpura medio
+      'Placona, Leandro': '#14b8a6', // Verde azulado
+    };
+    
+    // Si el agente tiene un color específico asignado, usarlo
+    if (specificAgentColors[agentName]) {
+      return specificAgentColors[agentName];
+    }
+    
     // Lista expandida de colores para mayor variedad
     const colors = [
       '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
       '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
       '#14b8a6', '#a855f7', '#eab308', '#f43f5e', '#0ea5e9',
-      '#d946ef', '#0891b2', '#65a30d', '#dc2626', '#7c3aed',
+      '#0891b2', '#65a30d', '#dc2626', '#7c3aed',
       '#db2777', '#0284c7', '#16a34a', '#ea580c', '#4f46e5',
       '#059669', '#9333ea', '#ca8a04', '#e11d48', '#0284c7'
     ];
@@ -1021,9 +1051,11 @@ function App() {
     } else if (statusLower.includes('derivado') || statusLower.includes('derived')) {
       return '#06b6d4'; // Cian (como status-derivado existente)
     } else if (statusLower.includes('pendiente') || statusLower.includes('pending')) {
-      return '#eab308'; // Amarillo lima (como status-pendiente existente)
+      return '#f97316'; // Naranja (como status-pendiente existente)
+    } else if (statusLower.includes('rechazado') || statusLower.includes('rejected')) {
+      return '#dc2626'; // Rojo oscuro (para rechazado)
     } else {
-      return '#6b7280'; // Gris (default)
+      return '#6b7280'; // Gris por defecto
     }
   };
 
@@ -1047,6 +1079,9 @@ function App() {
       return 'fas fa-share'; // Compartir/derivar
     } else if (statusLower.includes('pendiente') || statusLower.includes('pending')) {
       return 'fas fa-hourglass-half'; // Reloj de arena
+    } else if (statusLower.includes('rechazado') || statusLower.includes('rejected')) {
+      return 'fas fa-times-circle'; // X en círculo (para rechazado)
+    } else {
       return 'fas fa-circle'; // Círculo genérico
     }
   };
@@ -1288,6 +1323,8 @@ function App() {
       'ti': 'fas fa-laptop-code',
       'soporte técnico': 'fas fa-headset',
       'soporte': 'fas fa-headset',
+      'prov soporte externo': 'fas fa-headset-simple',
+      'impresoras': 'fas fa-print',
       'informática': 'fas fa-desktop',
       'sistemas': 'fas fa-server',
       'sistema de gestión': 'fas fa-server',
@@ -1298,6 +1335,9 @@ function App() {
       'help desk': 'fas fa-life-ring',
       'desarrollo': 'fas fa-code',
       'programación': 'fas fa-terminal',
+      
+      // Impresoras / Hardware
+      'impresoras': 'fas fa-print',
       
       // RRHH / Personal
       'rrhh': 'fas fa-users',
@@ -1421,28 +1461,17 @@ function App() {
   const getDepartmentColor = (departmentName) => {
     if (!departmentName || departmentName === 'Sin depto') return '#6b7280';
     
-    // Debug: Mostrar el nombre exacto del departamento
-    console.log('🎨 [DEBUG] Departamento solicitado:', `"${departmentName}"`);
+    console.log('🎨 [DEBUG] Buscando color para departamento:', `"${departmentName}"`);
     
-    // FORZAR COLOR MOSTAZA PARA CUALQUIER VARIANTE DE SISTEMA/GESTIÓN
-    const deptLower = departmentName.toLowerCase().trim();
-    console.log('🎨 [DEBUG] Departamento normalizado:', `"${deptLower}"`);
-    
-    if (
-      deptLower.includes('sistema') || 
-      deptLower.includes('gestion') || 
-      deptLower.includes('gestión') ||
-      deptLower.includes('sistemas')
-    ) {
-      console.log('🎨 [DEBUG] DETECTADO SISTEMA/GESTIÓN - FORZANDO COLOR MOSTAZA #d97706');
-      return '#d97706';
-    }
+    const deptLower = departmentName.toLowerCase();
     
     // Colores específicos para departamentos conocidos
     const specificColors = {
       'ti': '#ccaa14ff', // Azul brillante
-      'soporte técnico': '#16b7d3ff', // Cian brillante
+      'soporte técnico': '#2e86a4ff', // Cian brillante
       'soporte': '#06b6d4', // Cian brillante
+      'prov soporte externo': '#f50b0b', // Rojo brillante
+      'impresoras': '#eb1313ff', // Verde brillante
       'informática': '#3b82f6', // Azul brillante
       'rrhh': '#10b981', // Verde esmeralda
       'recursos humanos': '#10b981', // Verde esmeralda
@@ -1472,10 +1501,21 @@ function App() {
       'servicio': '#f43f5e' // Rosa rojo
     };
     
-    // Buscar coincidencia exacta primero
+    // Primero buscar coincidencia exacta en specificColors
     if (specificColors[deptLower]) {
-      console.log('🎨 [DEBUG] Color encontrado en specificColors:', specificColors[deptLower]);
+      console.log('🎨 [DEBUG] Color encontrado por coincidencia exacta:', deptLower, specificColors[deptLower]);
       return specificColors[deptLower];
+    }
+    
+    // Sistema de gestión - Prioridad alta
+    if (
+      deptLower.includes('sistema') || 
+      deptLower.includes('gestion') || 
+      deptLower.includes('gestión') ||
+      deptLower.includes('sistemas')
+    ) {
+      console.log('🎨 [DEBUG] DETECTADO SISTEMA/GESTIÓN - FORZANDO COLOR MOSTAZA #d97706');
+      return '#d97706';
     }
     
     // Buscar coincidencias parciales
@@ -1622,10 +1662,9 @@ function App() {
 
   const fetchDepartments = async () => {
     try {
-      // Por ahora, usar solo datos locales hasta que el backend tenga el endpoint
-      console.log('🏢 [INFO] Cargando departamentos desde datos locales (endpoint no disponible)');
+      console.log('🏢 [INFO] Cargando departamentos desde localStorage');
       
-      // Cargar departamentos guardados en localStorage si existen
+      // Cargar departamentos guardados en localStorage
       const savedDepartments = localStorage.getItem('local_departments');
       if (savedDepartments) {
         const depts = JSON.parse(savedDepartments);
@@ -1637,7 +1676,6 @@ function App() {
       }
     } catch (error) {
       console.error('Error fetching departments:', error);
-      // En caso de error, empezar con array vacío
       setDepartments([]);
     }
   };
@@ -2194,7 +2232,7 @@ function App() {
                 color: (ticket.department || getTicketDepartment(ticket.id)) ? 
                   getDepartmentColor(ticket.department || getTicketDepartment(ticket.id)) : '#6b7280',
                 border: (ticket.department || getTicketDepartment(ticket.id)) ? 
-                  `1px solid ${getDepartmentColor(ticket.department || getTicketDepartment(ticket.id))}40` : '1px solid rgba(107, 114, 128, 0.3)',
+                  `2px solid ${getDepartmentColor(ticket.department || getTicketDepartment(ticket.id))}` : '2px solid rgba(107, 114, 128, 0.5)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -2203,7 +2241,9 @@ function App() {
                 fontSize: '0.75rem',
                 fontWeight: '600',
                 textTransform: 'uppercase',
-                letterSpacing: '0.5px'
+                letterSpacing: '0.5px',
+                boxShadow: (ticket.department || getTicketDepartment(ticket.id)) ? 
+                  `0 2px 4px ${getDepartmentColor(ticket.department || getTicketDepartment(ticket.id))}20` : 'none'
               }}>
                 <i className={getDepartmentIcon(ticket.department || getTicketDepartment(ticket.id))} style={{ fontSize: '0.6rem' }}></i>
                 {ticket.department || getTicketDepartment(ticket.id) || 'Sin depto'}
@@ -2665,6 +2705,7 @@ function App() {
                 <option value="Resuelto">Resuelto</option>
                 <option value="Derivado">Derivado</option>
                 <option value="Pendiente">Pendiente</option>
+                <option value="Rechazado">Rechazado</option>
               </select>
             </div>
             <div className="form-group" style={getFormGroupStyles()}>
@@ -2830,12 +2871,26 @@ function App() {
                   <option value="" disabled>No hay departamentos configurados</option>
                 ) : (
                   <>
-                    {departments.map(dept => (
-                      <option key={dept.id} value={dept.name}>
-                        {dept.name}
-                      </option>
-                    ))}
-                    {formData.department && !departments.find(d => d.name === formData.department) && (
+                    {departments.map((dept, index) => {
+                      // Manejar tanto strings como objetos
+                      const deptValue = typeof dept === 'object' ? dept.name || dept.department || '' : dept;
+                      const deptLabel = typeof dept === 'object' ? dept.name || dept.department || 'Sin nombre' : dept;
+                      
+                      // No mostrar departamentos ocultos en el desplegable
+                      if (hiddenDepartments.includes(deptValue)) {
+                        return null;
+                      }
+                      
+                      return (
+                        <option key={index} value={deptValue}>
+                          {deptLabel}
+                        </option>
+                      );
+                    })}
+                    {formData.department && !departments.some(d => {
+                      const deptValue = typeof d === 'object' ? d.name || d.department || '' : d;
+                      return deptValue === formData.department;
+                    }) && (
                       <option value={formData.department}>
                         {formData.department}
                       </option>
@@ -5428,18 +5483,21 @@ function App() {
       { key: 'users', label: 'Usuarios' },
       { key: 'branches', label: 'Sucursales' },
       { key: 'agents', label: 'Agentes' },
+      { key: 'departments', label: 'Departamentos' },
     ];
 
     const getList = () => {
       if (settingsTab === 'users') return settingsUsers;
       if (settingsTab === 'branches') return settingsBranches;
-      return settingsAgents;
+      if (settingsTab === 'agents') return settingsAgents;
+      return settingsDepartments;
     };
 
     const setList = (next) => {
       if (settingsTab === 'users') setSettingsUsers(next);
       else if (settingsTab === 'branches') setSettingsBranches(next);
-      else setSettingsAgents(next);
+      else if (settingsTab === 'agents') setSettingsAgents(next);
+      else setSettingsDepartments(next);
     };
 
     const addItem = async () => {
@@ -5447,6 +5505,35 @@ function App() {
       if (!name) return;
       setSettingsLoading(true);
       setSettingsError('');
+      
+      // Para departamentos, usar localStorage
+      if (settingsTab === 'departments') {
+        try {
+          const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
+          if (savedDepartments.includes(name)) {
+            setSettingsError('El departamento ya existe');
+            return;
+          }
+          savedDepartments.push(name);
+          localStorage.setItem('local_departments', JSON.stringify(savedDepartments));
+          setSettingsDepartments(savedDepartments);
+          setSettingsNewName('');
+          
+          // También actualizar el estado global departments para que aparezca en el desplegable
+          setDepartments(savedDepartments);
+          
+          console.log('➕ [DEBUG] Departamento agregado:', name);
+          console.log('🔄 [DEBUG] Estado global departments actualizado:', savedDepartments);
+        } catch (e) {
+          setSettingsError('Error al guardar departamento');
+          console.error('Error guardando departamento:', e);
+        } finally {
+          setSettingsLoading(false);
+        }
+        return;
+      }
+      
+      // Para usuarios, sucursales y agentes (API)
       try {
         const resp = await fetch(`${API_BASE}/api/settings/${settingsTab}`, {
           method: 'POST',
@@ -5468,33 +5555,7 @@ function App() {
       }
     };
 
-    const renameItem = async (item) => {
-      const newName = window.prompt('Nuevo nombre:', item.name);
-      if (newName === null) return;
-      const name = String(newName).trim();
-      if (!name) return;
-      setSettingsLoading(true);
-      setSettingsError('');
-      try {
-        const resp = await fetch(`${API_BASE}/api/settings/${settingsTab}/${item.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        });
-        const data = await resp.json();
-        if (!resp.ok || data.status === 'error') {
-          setSettingsError(data.message || 'Error al renombrar');
-          return;
-        }
-        await fetchSettingsAll();
-        await fetchGroups();
-      } catch (e) {
-        setSettingsError('Error de conexión');
-      } finally {
-        setSettingsLoading(false);
-      }
-    };
-
+    
     const toggleActive = async (item) => {
       const nextActive = !item.active;
       setSettingsLoading(true);
@@ -5511,6 +5572,119 @@ function App() {
           return;
         }
         setList(getList().map(x => x.id === item.id ? { ...x, active: nextActive } : x));
+        await fetchGroups();
+      } catch (e) {
+        setSettingsError('Error de conexión');
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+
+    const renameItem = async (item) => {
+      const currentName = settingsTab === 'departments' ? item : item.name;
+      const newName = prompt(`Renombrar "${currentName}":`, currentName);
+      if (!newName || newName.trim() === currentName) return;
+      
+      setSettingsLoading(true);
+      setSettingsError('');
+      
+      // Para departamentos, usar localStorage
+      if (settingsTab === 'departments') {
+        try {
+          const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
+          const updatedDepartments = savedDepartments.map(dept => dept === item ? newName.trim() : dept);
+          localStorage.setItem('local_departments', JSON.stringify(updatedDepartments));
+          setSettingsDepartments(updatedDepartments);
+          
+          // También actualizar el estado global departments
+          setDepartments(updatedDepartments);
+          
+          console.log('✏️ [DEBUG] Departamento renombrado:', item, '→', newName.trim());
+        } catch (e) {
+          setSettingsError('Error al renombrar departamento');
+        } finally {
+          setSettingsLoading(false);
+        }
+        return;
+      }
+      
+      // Para usuarios, sucursales y agentes (API)
+      try {
+        const resp = await fetch(`${API_BASE}/api/settings/${settingsTab}/${item.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName.trim() })
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.status === 'error') {
+          setSettingsError(data.message || 'Error al renombrar');
+          return;
+        }
+        await fetchSettingsAll();
+        await fetchGroups();
+      } catch (e) {
+        setSettingsError('Error de conexión');
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+
+    const deleteItem = async (item) => {
+      const itemName = settingsTab === 'departments' ? item : (item.name || item);
+      const isHidden = settingsTab === 'departments' && hiddenDepartments.includes(item);
+      
+      if (!confirm(`¿Estás seguro de que quieres ${isHidden ? 'hacer VISIBLE' : isHidden ? 'eliminar permanentemente' : 'hacer NO VISIBLE'} "${itemName}"? ${isHidden ? 'Volverá a aparecer en la lista de selección.' : 'Ya no aparecerá en la lista de selección.'}`)) {
+        return;
+      }
+      
+      setSettingsLoading(true);
+      setSettingsError('');
+      
+      // Para departamentos, manejar visibilidad o eliminación
+      if (settingsTab === 'departments') {
+        try {
+          if (isHidden) {
+            // Restaurar: quitar de la lista de ocultos
+            let currentHidden = JSON.parse(localStorage.getItem('hidden_departments') || '[]');
+            currentHidden = currentHidden.filter(dept => dept !== item);
+            localStorage.setItem('hidden_departments', JSON.stringify(currentHidden));
+            setHiddenDepartments(currentHidden);
+            console.log('👁️ [DEBUG] Departamento hecho VISIBLE:', item);
+          } else {
+            // Ocultar: agregar a la lista de ocultos
+            let currentHidden = JSON.parse(localStorage.getItem('hidden_departments') || '[]');
+            if (!currentHidden.includes(item)) {
+              currentHidden.push(item);
+              localStorage.setItem('hidden_departments', JSON.stringify(currentHidden));
+              setHiddenDepartments(currentHidden);
+              console.log('👁️‍🗨️ [DEBUG] Departamento hecho NO VISIBLE:', item);
+            }
+          }
+          
+          // Actualizar el estado global departments para reflejar cambios de visibilidad
+          const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
+          setDepartments(savedDepartments);
+          
+        } catch (e) {
+          setSettingsError('Error al cambiar visibilidad del departamento');
+          console.error('Error cambiando visibilidad:', e);
+        } finally {
+          setSettingsLoading(false);
+        }
+        return;
+      }
+      
+      // Para usuarios, sucursales y agentes (API)
+      try {
+        const resp = await fetch(`${API_BASE}/api/settings/${settingsTab}/${item.id}`, {
+          method: 'DELETE'
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.status === 'error') {
+          setSettingsError(data.message || 'Error al eliminar');
+          return;
+        }
+        await fetchSettingsAll();
         await fetchGroups();
       } catch (e) {
         setSettingsError('Error de conexión');
@@ -5584,37 +5758,73 @@ function App() {
             <thead>
               <tr>
                 <th>Nombre</th>
-                <th>Estado</th>
+                {settingsTab !== 'departments' && <th>Estado</th>}
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {settingsLoading && list.length === 0 ? (
-                <tr><td colSpan={3} style={{ padding: '1.5rem' }}>Cargando...</td></tr>
+                <tr><td colSpan={settingsTab === 'departments' ? 2 : 3} style={{ padding: '1.5rem' }}>Cargando...</td></tr>
               ) : (
-                list.map(item => (
-                  <tr key={item.id} style={{ opacity: item.active ? 1 : 0.55 }}>
-                    <td style={{ fontWeight: 700 }}>{item.name}</td>
-                    <td>
-                      <span className={`badge ${item.active ? 'status-abierto' : 'status-cerrado'}`}>{item.active ? 'Activo' : 'Inactivo'}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button className="action-btn edit" title="Renombrar" onClick={() => renameItem(item)}><i className="fas fa-i-cursor"></i></button>
-                        <button
-                          className={`action-btn ${item.active ? 'delete' : 'view'}`}
-                          title={item.active ? 'Desactivar' : 'Activar'}
-                          onClick={() => toggleActive(item)}
-                        >
-                          <i className={`fas ${item.active ? 'fa-user-slash' : 'fa-user-check'}`}></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                list.map((item, index) => {
+                  // Para departamentos, item es un string, para otros es un objeto
+                  const itemName = settingsTab === 'departments' ? item : item.name;
+                  const itemId = settingsTab === 'departments' ? index : item.id;
+                  const isActive = settingsTab === 'departments' ? true : item.active;
+                  
+                  // Verificar si el departamento está oculto (solo para departamentos)
+                  const isHidden = settingsTab === 'departments' && hiddenDepartments.includes(item);
+                  
+                  return (
+                    <tr key={itemId} style={{ 
+                      opacity: isActive ? 1 : 0.55,
+                      backgroundColor: isHidden ? 'rgba(239, 68, 68, 0.1)' : 'transparent'
+                    }}>
+                      <td style={{ 
+                        fontWeight: 700,
+                        textDecoration: isHidden ? 'line-through' : 'none',
+                        color: isHidden ? '#ef4444' : 'inherit'
+                      }}>
+                        {String(itemName)}
+                        {isHidden && <span style={{ marginLeft: '8px', fontSize: '0.8em', color: '#ef4444' }}>(NO VISIBLE)</span>}
+                      </td>
+                      {settingsTab !== 'departments' && (
+                        <td>
+                          <span className={`badge ${isActive ? 'status-abierto' : 'status-cerrado'}`}>{isActive ? 'Activo' : 'Inactivo'}</span>
+                        </td>
+                      )}
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {settingsTab === 'departments' && (
+                            <button className="action-btn edit" title="Renombrar" onClick={() => renameItem(item)}><i className="fas fa-i-cursor"></i></button>
+                          )}
+                          {settingsTab !== 'departments' && (
+                            <button className="action-btn edit" title="Renombrar" onClick={() => renameItem(item)}><i className="fas fa-i-cursor"></i></button>
+                          )}
+                          {settingsTab !== 'departments' && (
+                            <button
+                              className={`action-btn ${isActive ? 'delete' : 'view'}`}
+                              title={isActive ? 'Desactivar' : 'Activar'}
+                              onClick={() => toggleActive(item)}
+                            >
+                              <i className={`fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}`}></i>
+                            </button>
+                          )}
+                          <button
+                            className={`action-btn ${isHidden ? 'view' : 'delete'}`}
+                            title={isHidden ? 'Hacer Visible' : 'Hacer NO VISIBLE'}
+                            onClick={() => deleteItem(item)}
+                          >
+                            <i className={`fas ${isHidden ? 'fa-eye' : 'fa-eye-slash'}`}></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
               {!settingsLoading && list.length === 0 && (
-                <tr><td colSpan={3} style={{ padding: '1.5rem' }}>Sin registros.</td></tr>
+                <tr><td colSpan={settingsTab === 'departments' ? 2 : 3} style={{ padding: '1.5rem' }}>Sin registros.</td></tr>
               )}
             </tbody>
           </table>
@@ -6032,7 +6242,7 @@ function App() {
                               color: deptName ? 
                                 deptColor : '#6b7280',
                               border: deptName ? 
-                                `1px solid ${deptColor}40` : '1px solid rgba(107, 114, 128, 0.3)',
+                                `2px solid ${deptColor}` : '2px solid rgba(107, 114, 128, 0.5)',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '6px',
@@ -6041,7 +6251,9 @@ function App() {
                               fontSize: '0.75rem',
                               fontWeight: '600',
                               textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
+                              letterSpacing: '0.5px',
+                              boxShadow: deptName ? 
+                                `0 2px 4px ${deptColor}20` : 'none'
                             }}>
                               <i className={getDepartmentIcon(deptName)} style={{ fontSize: '0.6rem' }}></i>
                               {deptName || 'Sin depto'}
