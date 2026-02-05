@@ -845,13 +845,13 @@ function App() {
     // COLORES ESPECÍFICOS PARA AGENTES - Formato: Apellido, Nombre: Color
     const specificAgentColors = {
       'Macia, Nicolas': '#f18056ff', // Naranja vibrante
-      'Arbello, Mauro': '#9333ea', // Púrpura real
+      'Arbello, Mauro': '#bfa9d4ff', // Púrpura real
       'Rodriguez, Guillermo': '#71c7e9ff', // Azul brillante
       'Billiot, Juan M': '#f4e04d', // Amarillo pastel suave
       'Gonzalez, David': '#10b981', // Verde esmeralda
       'Rognoni, Leandro': '#ec4899', // Rosa fucsia
-      'Ulariaga, Braian': '#05a3bfff', // Cian brillante
-      'Marini, Claudio': '#f59e0b', // Ámbar dorado
+      'Ulariaga, Braian': '#05869dff', // Cian brillante
+      'Marini, Claudio': '#9ecba1ff', // Ámbar dorado
       'Machado, Gabriel': '#e73535ff', // Rojo vibrante
       'Karpilovsky, Ivan': '#8b5cf6', // Púrpura medio
       'Placona, Leandro': '#14b8a6', // Verde azulado
@@ -910,6 +910,33 @@ function App() {
     return selectedColor;
   };
 
+  // Función para extraer hora del asunto del correo
+  const extractEmailTime = (details) => {
+    if (!details) return null;
+    
+    // Patrones para extraer hora del asunto del correo
+    const patterns = [
+      /(\d{1,2}):(\d{2})\s*(a\.m\.|a\.m\.|pm|am)\s*(\d{1,2}):(\d{2})/g, // 17:17, 09:30, etc.
+      /(\d{1,2})\s*(a\.m\.|a\.m\.|pm|am)\s*(\d{1,2}):(\d{2})/g,
+      /(\d{1,2}):(\d{2})\s*(a\.m\.|a\.m\.|pm|am)\s*(\d{1,2}):(\d{2})/g,
+      /las?\s*(\d{1,2}):(\d{2})/g,
+      /(\d{1,2})\s*hs?\s*(\d{1,2})/g
+    ];
+    
+    for (const pattern of patterns) {
+      const match = details.match(pattern);
+      if (match) {
+        const hour = parseInt(match[1]);
+        const minute = parseInt(match[2]);
+        const date = new Date();
+        date.setHours(hour, minute);
+        return date.toISOString();
+      }
+    }
+    
+    return null;
+  };
+
   // Función para formatear fecha de actividad reciente
   const formatActivityDate = (dateString) => {
     if (!dateString) return 'Sin fecha';
@@ -919,39 +946,44 @@ function App() {
     try {
       let date;
       
-      // Intentar parseo directo primero
-      date = new Date(dateString);
-      console.log(`🔍 [DEBUG] Date parseado directo: ${date}, isValid: ${!isNaN(date.getTime())}`);
-      
-      // Si falla, intentar formato DD/MM/YYYY
-      if (isNaN(date.getTime())) {
-        // Verificar si es formato DD/MM/YYYY
-        if (dateString.includes('/') && dateString.split('/').length === 3) {
-          const parts = dateString.split('/');
-          if (parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-            // Convertir DD/MM/YYYY a YYYY-MM-DD
-            const day = parts[0];
-            const month = parts[1];
-            const year = parts[2];
-            const isoDate = `${year}-${month}-${day}`;
-            console.log(`🔍 [DEBUG] Convertido DD/MM/YYYY a ISO: "${isoDate}"`);
-            
-            date = new Date(isoDate);
-            console.log(`🔍 [DEBUG] Date parseado DD/MM/YYYY: ${date}, isValid: ${!isNaN(date.getTime())}`);
-          }
+      // Si es un timestamp de Unix, convertirlo
+      if (typeof dateString === 'number' || /^\d+$/.test(dateString)) {
+        console.log(`🔍 [DEBUG] Detectado timestamp Unix: ${dateString}`);
+        date = new Date(parseInt(dateString) * 1000); // Convertir segundos a milisegundos
+      } else if (dateString.includes('/') && dateString.split('/').length === 3) {
+        // Siempre usar formato DD/MM/YYYY (formato argentino)
+        const parts = dateString.split('/');
+        if (parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+          // Convertir DD/MM/YYYY a YYYY-MM-DD (formato argentino)
+          const day = parts[0];
+          const month = parts[1];
+          const year = parts[2];
+          const isoDate = `${year}-${month}-${day}`;
+          console.log(`🔍 [DEBUG] Parseo DD/MM/YYYY (argentino): "${dateString}" -> "${isoDate}"`);
+          
+          // Forzar hora 00:00:00 para fechas sin hora específica
+          date = new Date(`${isoDate}T00:00:00`);
+          console.log(`🔍 [DEBUG] Date parseado DD/MM/YYYY: ${date}, isValid: ${!isNaN(date.getTime())}`);
+        } else {
+          date = new Date(dateString);
         }
+      } else {
+        // Intentar parseo directo para otros formatos
+        date = new Date(dateString);
       }
       
-      // Si sigue siendo inválido, devolver original
+      console.log(`🔍 [DEBUG] Date final: ${date}, isValid: ${!isNaN(date.getTime())}`);
+      
+      // Si sigue siendo inválido, intentar usar la fecha actual como fallback
       if (isNaN(date.getTime())) {
-        console.log(`🔍 [DEBUG] Todos los intentos fallaron, devolviendo original`);
-        return dateString;
+        console.log(`🔍 [DEBUG] Todos los intentos fallaron, usando fecha actual`);
+        date = new Date();
       }
       
       return formatValidDate(date);
     } catch (error) {
       console.error('Error formateando fecha:', error);
-      return dateString;
+      return 'Fecha inválida';
     }
   };
   
@@ -966,29 +998,40 @@ function App() {
     const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     
     console.log(`🔍 [DEBUG] formatValidDate:`);
+    console.log(`🔍 [DEBUG]   date original: ${date}`);
     console.log(`🔍 [DEBUG]   now: ${now}`);
     console.log(`🔍 [DEBUG]   today: ${today}`);
     console.log(`🔍 [DEBUG]   yesterday: ${yesterday}`);
     console.log(`🔍 [DEBUG]   activityDate: ${activityDate}`);
+    console.log(`🔍 [DEBUG]   activityDate.getTime(): ${activityDate.getTime()}`);
     console.log(`🔍 [DEBUG]   today.getTime(): ${today.getTime()}`);
     console.log(`🔍 [DEBUG]   yesterday.getTime(): ${yesterday.getTime()}`);
-    console.log(`🔍 [DEBUG]   activityDate.getTime(): ${activityDate.getTime()}`);
-    console.log(`🔍 [DEBUG]   activityDate === today: ${activityDate.getTime() === today.getTime()}`);
-    console.log(`🔍 [DEBUG]   activityDate === yesterday: ${activityDate.getTime() === yesterday.getTime()}`);
+    console.log(`🔍 [DEBUG]   ¿Es hoy?: ${activityDate.getTime() === today.getTime()}`);
+    console.log(`🔍 [DEBUG]   ¿Es ayer?: ${activityDate.getTime() === yesterday.getTime()}`);
     
-    // Formato de hora
-    const time = date.toLocaleTimeString('es-AR', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
-    });
+    // Formato de hora - si no hay hora real, mostrar indicador
+    let time;
+    if (date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0) {
+      // Si la hora es 00:00:00, probablemente no se guardó la hora real
+      time = 'sin hora';
+    } else {
+      time = date.toLocaleTimeString('es-AR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+    }
+    
+    console.log(`🔍 [DEBUG]   time formateado: ${time}`);
     
     if (activityDate.getTime() === today.getTime()) {
-      console.log(`🔍 [DEBUG] Resultado: Hoy, ${time}`);
-      return `Hoy, ${time}`;
+      const result = time === 'sin hora' ? 'Hoy' : `Hoy, ${time}`;
+      console.log(`🔍 [DEBUG] Resultado: ${result}`);
+      return result;
     } else if (activityDate.getTime() === yesterday.getTime()) {
-      console.log(`🔍 [DEBUG] Resultado: Ayer, ${time}`);
-      return `Ayer, ${time}`;
+      const result = time === 'sin hora' ? 'Ayer' : `Ayer, ${time}`;
+      console.log(`🔍 [DEBUG] Resultado: ${result}`);
+      return result;
     } else {
       // Si es de esta semana, mostrar día de la semana
       const weekAgo = new Date(today);
@@ -996,15 +1039,17 @@ function App() {
       
       if (activityDate >= weekAgo) {
         const dayName = date.toLocaleDateString('es-AR', { weekday: 'long' });
-        console.log(`🔍 [DEBUG] Resultado: ${dayName}, ${time}`);
-        return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ${time}`;
+        const result = time === 'sin hora' ? dayName : `${dayName}, ${time}`;
+        console.log(`🔍 [DEBUG] Resultado: ${result}`);
+        return result;
       } else {
         // Formato completo para fechas más antiguas
-        const result = date.toLocaleDateString('es-AR', { 
+        const dateStr = date.toLocaleDateString('es-AR', { 
           day: '2-digit', 
           month: '2-digit', 
           year: '2-digit' 
-        }) + `, ${time}`;
+        });
+        const result = time === 'sin hora' ? dateStr : `${dateStr}, ${time}`;
         console.log(`🔍 [DEBUG] Resultado: ${result}`);
         return result;
       }
@@ -1089,13 +1134,14 @@ function App() {
   // Efectos para SLA y notificaciones
   
   // Función para agregar notificaciones
-  const addNotification = (id, type, title, message) => {
+  const addNotification = (id, type, title, message, emailTime = null) => {
     const notification = {
       id,
       type, // 'success', 'warning', 'error', 'info'
       title,
       message,
-      timestamp: new Date()
+      timestamp: new Date(),
+      emailTime: emailTime // Guardar hora del correo para nuevos tickets
     };
     
     console.log(`📢 [DEBUG] Notificación creada:`, notification);
@@ -1135,7 +1181,8 @@ function App() {
       addNotification(
         'success',
         '🎫 Nuevo Ticket',
-        `${newCount} ticket${newCount > 1 ? 's' : ''} nuevo${newCount > 1 ? 's' : ''}`
+        `${newCount} ticket${newCount > 1 ? 's' : ''} nuevo${newCount > 1 ? 's' : ''}`,
+        null // No hay emailTime para tickets detectados por conteo
       );
       
       // Sonido de notificación para tickets (importante!)
@@ -1280,21 +1327,25 @@ function App() {
   const fetchData = async () => {
     try {
       console.log(`🔄 [DEBUG] fetchData iniciando...`);
+      console.log(`🔄 [DEBUG] fetchData - lastTicketCount antes: ${lastTicketCount}`);
       const responses = await Promise.all([
         fetch(`${API_BASE}/api/dashboard/stats`),
         fetch(`${API_BASE}/api/tickets`)
       ]);
+      
       const statsData = await responses[0].json();
       const ticketsData = await responses[1].json();
       
       console.log(`🎫 [DEBUG] fetchData obtuvo ${ticketsData.length} tickets`);
       console.log(`🎫 [DEBUG] fetchData: lastTicketCount=${lastTicketCount}, ticketsData.length=${ticketsData.length}`);
+      console.log(`🎫 [DEBUG] fetchData - ticketsInitialized: ${ticketsInitialized.current}`);
       
       // Siempre detectar nuevos tickets (incluso en la primera carga)
       checkForNewTickets(ticketsData);
       
       setStats(statsData);
       setTickets(ticketsData);
+      console.log(`🔄 [DEBUG] fetchData - lastTicketCount después: ${lastTicketCount}`);
     } catch (error) {
       console.error('Error fetching data:', error);
       console.log(`❌ [ERROR] fetchData falló: ${error.message}`);
@@ -1790,19 +1841,40 @@ function App() {
       const response = await fetch(`${API_BASE}/api/tickets/${updatedTicket.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedTicket),
+        body: JSON.stringify(updatedTicket)
       });
       const data = await response.json();
       if (data.status === 'success') {
+        // No generar notificación al guardar manualmente (solo para tickets automáticos)
+        console.log('🎫 [INFO] Ticket guardado exitosamente - Sin notificación manual');
+        
+        // Actualizar el estado local inmediatamente
+        setTickets(prev => {
+          const newTicket = {
+            ...updatedTicket,
+            id: data.ticket_id || data.id,
+            creation_date: new Date().toISOString().split('T')[0] // Usar fecha actual
+          };
+          const newTickets = [newTicket, ...prev];
+          console.log('🎫 [DEBUG] Ticket actualizado localmente:', newTicket);
+          return newTickets;
+        });
         setViewMode('list');
         setSelectedTicket(null);
+        setActiveTab('tickets'); // Volver a la pestaña de tickets
         fetchData();
         fetchGroups();
       } else {
         alert('Error: ' + data.message);
       }
     } catch (error) {
-      alert('Error de conexión');
+      console.error('Error guardando ticket:', error);
+      // No mostrar alerta de error si el ticket se guardó exitosamente
+      // Solo mostrar para errores graves de red
+      if (error.message && error.message.includes('Failed to fetch')) {
+        alert('Error de conexión - Verifique que el servidor esté activo');
+      }
+      // Para otros errores, solo log en consola
     }
   };
 
@@ -1823,7 +1895,10 @@ function App() {
         alert('Error: ' + data.message);
       }
     } catch (err) {
-      alert('Error de conexión');
+      console.error('Error actualizando servidor:', err);
+      if (err.message && err.message.includes('Failed to fetch')) {
+        alert('Error de conexión - Verifique que el servidor esté activo');
+      }
     }
   };
 
@@ -1840,7 +1915,10 @@ function App() {
         alert('Error: ' + data.message);
       }
     } catch (err) {
-      alert('Error de conexión');
+      console.error('Error actualizando servidor:', err);
+      if (err.message && err.message.includes('Failed to fetch')) {
+        alert('Error de conexión - Verifique que el servidor esté activo');
+      }
     }
   };
 
@@ -1873,7 +1951,10 @@ function App() {
         alert('Error: ' + data.message);
       }
     } catch (err) {
-      alert('Error de conexión');
+      console.error('Error actualizando servidor:', err);
+      if (err.message && err.message.includes('Failed to fetch')) {
+        alert('Error de conexión - Verifique que el servidor esté activo');
+      }
     }
   };
 
@@ -5549,7 +5630,8 @@ function App() {
         await fetchSettingsAll();
         await fetchGroups();
       } catch (e) {
-        setSettingsError('Error de conexión');
+        console.error('Error en settings:', e);
+        setSettingsError('Error al cargar configuración');
       } finally {
         setSettingsLoading(false);
       }
@@ -5574,7 +5656,8 @@ function App() {
         setList(getList().map(x => x.id === item.id ? { ...x, active: nextActive } : x));
         await fetchGroups();
       } catch (e) {
-        setSettingsError('Error de conexión');
+        console.error('Error en settings:', e);
+        setSettingsError('Error al cargar configuración');
       } finally {
         setSettingsLoading(false);
       }
@@ -5623,7 +5706,8 @@ function App() {
         await fetchSettingsAll();
         await fetchGroups();
       } catch (e) {
-        setSettingsError('Error de conexión');
+        console.error('Error en settings:', e);
+        setSettingsError('Error al cargar configuración');
       } finally {
         setSettingsLoading(false);
       }
@@ -5687,7 +5771,8 @@ function App() {
         await fetchSettingsAll();
         await fetchGroups();
       } catch (e) {
-        setSettingsError('Error de conexión');
+        console.error('Error en settings:', e);
+        setSettingsError('Error al cargar configuración');
       } finally {
         setSettingsLoading(false);
       }
@@ -6026,13 +6111,13 @@ function App() {
         );
       case 'tickets':
         if (viewMode === 'edit' && selectedTicket) {
-          return <TicketEditView ticket={selectedTicket} onSave={handleSaveTicket} onBack={() => { setViewMode('list'); setSelectedTicket(null); }} />;
+          return <TicketEditView ticket={selectedTicket} onSave={handleSaveTicket} onBack={() => { setViewMode('list'); setSelectedTicket(null); setActiveTab('tickets'); }} />;
         }
         if (viewMode === 'create') {
           return <TicketCreateView onSuccess={() => {
             setViewMode('list');
             fetchTickets();
-          }} onBack={() => setViewMode('list')} />;
+          }} onBack={() => { setViewMode('list'); setActiveTab('tickets'); }} />;
         }
         return (
           <div>
@@ -6548,12 +6633,46 @@ function App() {
           <div className={`nav-item ${activeTab === 'servers' ? 'active' : ''}`} onClick={() => { setActiveTab('servers'); setCurrentPage(1); setViewMode('list'); }}>
             <i className="fas fa-server"></i><span>Servidores</span>
           </div>
-          <div style={{ marginTop: 'auto' }}>
-            <div className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => { setActiveTab('settings'); setCurrentPage(1); setViewMode('list'); }}>
+          <div className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => { setActiveTab('settings'); setCurrentPage(1); setViewMode('list'); }}>
               <i className="fas fa-cog"></i><span>Configuración</span>
             </div>
-          </div>
         </nav>
+        {/* Espacio para fecha y hora - abajo de todo del sidebar */}
+        <div style={{ 
+          padding: '15px', 
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <div style={{
+            fontSize: '0.8rem',
+            color: 'rgba(255,255,255,0.7)',
+            marginBottom: '5px',
+            textAlign: 'center'
+          }}>
+            <i className="fas fa-clock" style={{ marginRight: '5px', color: 'rgba(255,255,255,0.5)' }}></i>
+            {new Date().toLocaleDateString('es-AR', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </div>
+          <div style={{
+            fontSize: '0.9rem',
+            fontWeight: '600',
+            color: 'rgba(255,255,255,0.8)',
+            textAlign: 'center'
+          }}>
+            {new Date().toLocaleTimeString('es-AR', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false 
+            })}
+          </div>
+        </div>
       </aside>
       <main className="main-layout">
         <header className="header-top">
