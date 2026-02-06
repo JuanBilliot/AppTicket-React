@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
+import CustomAddModal from './CustomAddModal'
 
 const API_BASE = 'http://127.0.0.1:5002';
 
@@ -620,7 +621,9 @@ function App() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [showAddServerModal, setShowAddServerModal] = useState(false);
   const [showEditServerModal, setShowEditServerModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addModalType, setAddModalType] = useState('');
+  const [addModalData, setAddModalData] = useState({ name: '', type: '' });
   const [selectedTicketForModal, setSelectedTicketForModal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -844,10 +847,10 @@ function App() {
     
     // COLORES ESPECÍFICOS PARA AGENTES - Formato: Apellido, Nombre: Color
     const specificAgentColors = {
+      'Billiot, Juan M': '#f4e04d', // Amarillo pastel suave (color original del usuario)
       'Macia, Nicolas': '#f18056ff', // Naranja vibrante
       'Arbello, Mauro': '#bfa9d4ff', // Púrpura real
       'Rodriguez, Guillermo': '#71c7e9ff', // Azul brillante
-      'Billiot, Juan M': '#f4e04d', // Amarillo pastel suave
       'Gonzalez, David': '#10b981', // Verde esmeralda
       'Rognoni, Leandro': '#ec4899', // Rosa fucsia
       'Ulariaga, Braian': '#05869dff', // Cian brillante
@@ -862,14 +865,38 @@ function App() {
       return specificAgentColors[agentName];
     }
     
-    // Lista expandida de colores para mayor variedad
+    // Lista expandida de colores para mayor variedad - COLORES BIEN DIFERENCIADOS
     const colors = [
-      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
-      '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-      '#14b8a6', '#a855f7', '#eab308', '#f43f5e', '#0ea5e9',
-      '#0891b2', '#65a30d', '#dc2626', '#7c3aed',
-      '#db2777', '#0284c7', '#16a34a', '#ea580c', '#4f46e5',
-      '#059669', '#9333ea', '#ca8a04', '#e11d48', '#0284c7'
+      '#1e40af', // Azul eléctrico brillante
+      '#f59e0b', // Ámbar dorado
+      '#10b981', // Verde esmeralda
+      '#ef4444', // Rojo vibrante
+      '#8b5cf6', // Púrpura real
+      '#ec4899', // Rosa fucsia
+      '#06b6d4', // Verde oliva
+      '#84cc16', // Lima verde
+      '#f97316', // Naranja brillante
+      '#6366f1', // Índigo
+      '#14b8a6', // Verde azulado
+      '#a855f7', // Violeta
+      '#eab308', // Amarillo mostaza
+      '#f43f5e', // Rosa rojo
+      '#0ea5e9', // Azul cielo
+      '#d946ef', // Magenta
+      '#0891b2', // Azul turquesa
+      '#65a30d', // Verde oliva oscuro
+      '#dc2626', // Rojo tomate
+      '#7c3aed', // Púrpura oscuro
+      '#db2777', // Rosa intenso
+      '#0284c7', // Azul océano
+      '#16a34a', // Verde bosque
+      '#ea580c', // Naranja quemado
+      '#4f46e5', // Azul medianoche
+      '#059669', // Verde mar
+      '#9333ea', // Violeta profundo
+      '#ca8a04', // Amarillo dorado
+      '#e11d48', // Rosa coral
+      '#0284c7'  // Azul profundo
     ];
     
     // Crear un mapa de colores asignados para evitar duplicados
@@ -1516,22 +1543,22 @@ function App() {
     
     const deptLower = departmentName.toLowerCase();
     
-    // Colores específicos para departamentos conocidos
+    // Colores específicos para departamentos conocidos - COLORES BIEN DIFERENCIADOS
     const specificColors = {
-      'ti': '#ccaa14ff', // Azul brillante
-      'soporte técnico': '#2e86a4ff', // Cian brillante
-      'soporte': '#06b6d4', // Cian brillante
-      'prov soporte externo': '#f50b0b', // Rojo brillante
-      'impresoras': '#eb1313ff', // Verde brillante
+      'ti': '#1e40af', // Azul eléctrico brillante
+      'soporte técnico': '#06b6d4', // Cian brillante
+      'soporte': '#0ea5e9', // Azul cielo
+      'prov soporte externo': '#dc2626', // Rojo tomate
+      'impresoras': '#10b981', // Verde esmeralda
       'informática': '#3b82f6', // Azul brillante
-      'rrhh': '#10b981', // Verde esmeralda
-      'recursos humanos': '#10b981', // Verde esmeralda
-      'personal': '#10b981', // Verde esmeralda
+      'rrhh': '#059669', // Verde mar
+      'recursos humanos': '#059669', // Verde mar
+      'personal': '#059669', // Verde mar
       'contabilidad': '#f59e0b', // Ámbar dorado
       'finanzas': '#f59e0b', // Ámbar dorado
       'administración': '#f59e0b', // Ámbar dorado
       'ventas': '#ef4444', // Rojo vibrante
-      'comercial': '#ef4444', // Rojo vibrante
+      'comercial': '#f43f5e', // Rosa rojo
       'logística': '#f97316', // Naranja brillante
       'almacén': '#f97316', // Naranja brillante
       'marketing': '#ec4899', // Rosa fucsia
@@ -1545,7 +1572,7 @@ function App() {
       'salud': '#ef4444', // Rojo vibrante
       'educación': '#eab308', // Amarillo mostaza
       'capacitación': '#eab308', // Amarillo mostaza
-      'seguridad': '#0aa014ff', // Verde oliva
+      'seguridad': '#0aa014', // Verde oliva
       'investigación': '#14b8a6', // Verde azulado
       'cliente': '#f43f5e', // Rosa rojo
       'atención': '#f43f5e', // Rosa rojo
@@ -1579,15 +1606,15 @@ function App() {
     
     console.log('🎨 [DEBUG] No se encontró color específico, usando hash aleatorio');
     
-    // Lista de colores vibrantes y distinguibles para departamentos
+    // Lista de colores vibrantes y distinguibles para departamentos - COLORES BIEN DIFERENCIADOS
     const departmentColors = [
-      '#3b82f6', // Azul brillante
-      '#10b981', // Verde esmeralda
+      '#1e40af', // Azul eléctrico brillante
       '#f59e0b', // Ámbar dorado
+      '#10b981', // Verde esmeralda
       '#ef4444', // Rojo vibrante
       '#8b5cf6', // Púrpura real
       '#ec4899', // Rosa fucsia
-      '#06b6d4', // Cian brillante
+      '#0ea5e9', // Azul cielo
       '#84cc16', // Lima verde
       '#f97316', // Naranja brillante
       '#6366f1', // Índigo
@@ -1595,7 +1622,6 @@ function App() {
       '#a855f7', // Violeta
       '#eab308', // Amarillo mostaza
       '#f43f5e', // Rosa rojo
-      '#0ea5e9', // Azul cielo
       '#d946ef', // Magenta
       '#0891b2', // Azul turquesa
       '#65a30d', // Verde oliva
@@ -1610,8 +1636,7 @@ function App() {
       '#9333ea', // Violeta profundo
       '#ca8a04', // Amarillo dorado
       '#e11d48', // Rosa coral
-      '#0369a1', // Azul profundo
-      '#15803d'  // Verde oscuro
+      '#0284c7'  // Azul profundo
     ];
     
     // Crear un mapa de colores asignados para departamentos
@@ -2477,30 +2502,9 @@ function App() {
       if (value === 'new') {
         const labels = { 'agent': 'Agente', 'branch': 'Sucursal', 'user': 'Usuario', 'collaborators_select': 'Colaborador', 'department': 'Departamento' };
         const label = labels[name] || name;
-        const newValue = prompt(`Ingrese el nombre del nuevo ${label}:`);
-        if (newValue) {
-          if (name === 'collaborators' || name === 'collaborators_select') {
-            const current = formData.collaborators && formData.collaborators !== 'None' ? formData.collaborators : '';
-            const updated = current ? `${current}, ${newValue}` : newValue;
-            setFormData(prev => ({ ...prev, collaborators: updated }));
-          } else if (name === 'department') {
-            // Agregar departamento a la lista local y guardar
-            const newDept = {
-              id: Date.now(), // ID único basado en timestamp
-              name: newValue
-            };
-            setDepartments(prev => {
-              const updated = [...prev, newDept];
-              // Guardar en localStorage
-              localStorage.setItem('local_departments', JSON.stringify(updated));
-              console.log('🏢 [INFO] Departamento agregado y guardado:', newValue);
-              return updated;
-            });
-            setFormData(prev => ({ ...prev, department: newValue }));
-          } else {
-            setFormData(prev => ({ ...prev, [name]: newValue }));
-          }
-        }
+        setAddModalType(name);
+        setAddModalData({ name: '', type: '' });
+        setShowAddModal(true);
         return;
       }
 
@@ -2509,13 +2513,21 @@ function App() {
         const current = formData.collaborators && formData.collaborators !== 'None' ? formData.collaborators : '';
         const list = current ? current.split(',').map(s => s.trim()) : [];
         if (!list.includes(value)) {
-          const updated = current ? `${current}, ${value}` : value;
-          setFormData(prev => ({ ...prev, collaborators: updated }));
+          const newCollaborators = current ? `${current}, ${value}` : value;
+          setFormData(prev => ({ ...prev, collaborators: newCollaborators }));
         }
         return;
       }
 
       setFormData(prev => ({ ...prev, [name]: value }));
+      
+      // Si estamos agregando un nuevo elemento desde el formulario de edición
+      if (name === 'user' || name === 'agent' || name === 'branch' || name === 'department') {
+        if (value === 'new') {
+          // El modal ya se abre desde el handleChange anterior
+          return;
+        }
+      }
     };
 
     const removeCollaborator = (collab) => {
@@ -5106,16 +5118,77 @@ function App() {
                     });
 
                     if (response.ok) {
+                      // Mostrar confirmación moderna
+                      const successDiv = document.createElement('div');
+                      successDiv.className = 'modal-success';
+                      successDiv.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                          <i class="fas fa-check-circle" style="font-size: 1.2rem;"></i>
+                          <div>
+                            <div style="font-weight: 700; margin-bottom: 0.25rem;">¡Elemento agregado exitosamente!</div>
+                            <div style="font-size: 0.9rem; opacity: 0.9;">El nuevo elemento ha sido guardado correctamente.</div>
+                          </div>
+                        </div>
+                      `;
+                      document.body.appendChild(successDiv);
+                      
+                      setTimeout(() => {
+                        successDiv.remove();
+                      }, 3000);
+                      
                       setShowCreateModal(false);
                       fetchHomeData();
                     } else {
-                      alert('Error al crear ticket');
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'modal-success';
+                      errorDiv.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(239, 68, 68, 0.9))';
+                      errorDiv.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                          <i class="fas fa-exclamation-circle" style="font-size: 1.2rem;"></i>
+                          <div>
+                            <div style="font-weight: 700; margin-bottom: 0.25rem;">Error al agregar elemento</div>
+                            <div style="font-size: 0.9rem; opacity: 0.9;">No se pudo guardar el elemento. Inténtalo nuevamente.</div>
+                          </div>
+                        </div>
+                      `;
+                      document.body.appendChild(errorDiv);
+                      
+                      setTimeout(() => {
+                        errorDiv.remove();
+                      }, 3000);
                     }
                   } catch (error) {
-                    alert('Error al crear ticket');
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'modal-success';
+                    errorDiv.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(239, 68, 68, 0.9))';
+                    errorDiv.innerHTML = `
+                      <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 1.2rem;"></i>
+                        <div>
+                          <div style="font-weight: 700; margin-bottom: 0.25rem;">Error de conexión</div>
+                          <div style="font-size: 0.9rem; opacity: 0.9;">Error al conectar con el servidor. Verifique su conexión.</div>
+                        </div>
+                      </div>
+                    `;
+                    document.body.appendChild(errorDiv);
+                    
+                    setTimeout(() => {
+                      errorDiv.remove();
+                    }, 3000);
                   }
                 }}>
                   <div style={{ display: 'grid', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-main)', fontWeight: '500' }}>
+                        Agente
+                      </label>
+                      <input
+                        type="text"
+                        name="agent"
+                        required
+                        className="modal-input"
+                      />
+                    </div>
                     <div>
                       <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-main)', fontWeight: '500' }}>
                         Usuario
@@ -5124,15 +5197,7 @@ function App() {
                         type="text"
                         name="user"
                         required
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid var(--glass-border)',
-                          borderRadius: '8px',
-                          color: 'white',
-                          fontSize: '1rem'
-                        }}
+                        className="modal-input"
                       />
                     </div>
                     <div>
@@ -5143,15 +5208,7 @@ function App() {
                         type="text"
                         name="branch"
                         required
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid var(--glass-border)',
-                          borderRadius: '8px',
-                          color: 'white',
-                          fontSize: '1rem'
-                        }}
+                        className="modal-input"
                       />
                     </div>
                     <div>
@@ -5665,8 +5722,11 @@ function App() {
 
     const renameItem = async (item) => {
       const currentName = settingsTab === 'departments' ? item : item.name;
-      const newName = prompt(`Renombrar "${currentName}":`, currentName);
-      if (!newName || newName.trim() === currentName) return;
+      // Para renombrar, usamos el mismo modal personalizado
+      setAddModalType('rename');
+      setAddModalData({ name: currentName, type: '', originalItem: item });
+      setShowAddModal(true);
+      return;
       
       setSettingsLoading(true);
       setSettingsError('');
@@ -5822,11 +5882,10 @@ function App() {
 
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
           <input
-            className="custom-input"
+            className="modal-input"
             value={settingsNewName}
             onChange={(e) => setSettingsNewName(e.target.value)}
             placeholder="Nombre nuevo..."
-            style={{ maxWidth: '320px' }}
           />
           <button
             className="nav-item"
@@ -6817,6 +6876,151 @@ function App() {
           ) : renderContent()}
         </div>
       </main>
+      
+      {/* Custom Modal for Adding Items */}
+      <CustomAddModal
+        showAddModal={showAddModal}
+        setShowAddModal={setShowAddModal}
+        addModalType={addModalType}
+        addModalData={addModalData}
+        setAddModalData={setAddModalData}
+        onAddItem={async (type, name, deptType) => {
+          console.log('Adding item:', type, name, deptType);
+          
+          if (type === 'department') {
+            // Lógica para departamentos (localStorage)
+            const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
+            if (!savedDepartments.includes(name)) {
+              const updated = [...savedDepartments, name];
+              localStorage.setItem('local_departments', JSON.stringify(updated));
+              setDepartments(updated);
+              setSettingsDepartments(updated);
+              
+              // Actualizar el formulario si estamos en edición de ticket
+              if (viewMode === 'edit' && selectedTicket) {
+                setFormData(prev => ({ ...prev, department: name }));
+              }
+              
+              // Mostrar confirmación
+              const notification = document.createElement('div');
+              notification.className = 'modal-success';
+              notification.innerHTML = `<i class="fas fa-check-circle"></i> Departamento "${name}" agregado correctamente`;
+              document.body.appendChild(notification);
+              setTimeout(() => {
+                if (notification.parentNode) {
+                  notification.parentNode.removeChild(notification);
+                }
+              }, 3000);
+            }
+          } else if (type === 'user' || type === 'agent' || type === 'branch') {
+            // Lógica para usuarios, agentes, sucursales (API)
+            try {
+              setSettingsLoading(true);
+              setSettingsError('');
+              
+              const resp = await fetch(`${API_BASE}/api/settings/${type}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              
+              const data = await resp.json();
+              
+              if (!resp.ok || data.status === 'error') {
+                setSettingsError(data.message || `Error al agregar ${type}`);
+                return;
+              }
+              
+              await fetchSettingsAll();
+              await fetchGroups();
+              
+              // Actualizar el formulario si estamos en edición de ticket
+              if (viewMode === 'edit' && selectedTicket) {
+                setFormData(prev => ({ ...prev, [type]: name }));
+              }
+              
+              // Mostrar confirmación
+              const notification = document.createElement('div');
+              notification.className = 'modal-success';
+              notification.innerHTML = `<i class="fas fa-check-circle"></i> ${type === 'user' ? 'Usuario' : type === 'agent' ? 'Agente' : 'Sucursal'} "${name}" agregado correctamente`;
+              document.body.appendChild(notification);
+              setTimeout(() => {
+                if (notification.parentNode) {
+                  notification.parentNode.removeChild(notification);
+                }
+              }, 3000);
+              
+            } catch (e) {
+              console.error('Error adding item:', e);
+              setSettingsError(`Error al agregar ${type}`);
+            } finally {
+              setSettingsLoading(false);
+            }
+          }
+        }}
+        onRenameItem={async (item, newName) => {
+          console.log('Renaming item:', item, newName);
+          
+          if (settingsTab === 'departments') {
+            // Lógica para departamentos (localStorage)
+            const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
+            const updated = savedDepartments.map(dept => dept === item ? newName : dept);
+            localStorage.setItem('local_departments', JSON.stringify(updated));
+            setDepartments(updated);
+            setSettingsDepartments(updated);
+            
+            // Mostrar confirmación
+            const notification = document.createElement('div');
+            notification.className = 'modal-success';
+            notification.innerHTML = `<i class="fas fa-check-circle"></i> Departamento renombrado de "${item}" a "${newName}" correctamente`;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 3000);
+          } else if (settingsTab === 'users' || settingsTab === 'agents' || settingsTab === 'branches') {
+            // Lógica para usuarios, agentes, sucursales (API)
+            try {
+              setSettingsLoading(true);
+              setSettingsError('');
+              
+              const resp = await fetch(`${API_BASE}/api/settings/${settingsTab}/${item.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName.trim() })
+              });
+              
+              const data = await resp.json();
+              
+              if (!resp.ok || data.status === 'error') {
+                setSettingsError(data.message || 'Error al renombrar');
+                return;
+              }
+              
+              await fetchSettingsAll();
+              await fetchGroups();
+              
+              // Mostrar confirmación
+              const notification = document.createElement('div');
+              notification.className = 'modal-success';
+              notification.innerHTML = `<i class="fas fa-check-circle"></i> ${settingsTab === 'users' ? 'Usuario' : settingsTab === 'agents' ? 'Agente' : 'Sucursal'} renombrado de "${item.name}" a "${newName}" correctamente`;
+              document.body.appendChild(notification);
+              setTimeout(() => {
+                if (notification.parentNode) {
+                  notification.parentNode.removeChild(notification);
+                }
+              }, 3000);
+              
+            } catch (e) {
+              console.error('Error renaming item:', e);
+              setSettingsError('Error al renombrar');
+            } finally {
+              setSettingsLoading(false);
+            }
+          }
+        }}
+      />
     </>
   )
 }
