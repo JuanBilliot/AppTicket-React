@@ -2406,6 +2406,8 @@ function App() {
     });
     const [localBranchSuggestions, setLocalBranchSuggestions] = useState([]);
     const [showLocalSuggestions, setShowLocalSuggestions] = useState(false);
+    const [agentDepartmentSuggestions, setAgentDepartmentSuggestions] = useState([]);
+    const [showAgentDepartmentSuggestions, setShowAgentDepartmentSuggestions] = useState(false);
 
     // Función reutilizable para estilos Fortune 500
     const getFormGroupStyles = () => ({
@@ -2487,6 +2489,91 @@ function App() {
       }
     };
 
+    // Función para obtener sugerencias de departamento según agente
+    const fetchAgentDepartmentSuggestions = async (agentName) => {
+      if (!agentName || agentName.trim() === '') {
+        setAgentDepartmentSuggestions([]);
+        setShowAgentDepartmentSuggestions(false);
+        return;
+      }
+
+      try {
+        console.log('🔄 [DEBUG] Buscando sugerencias dinámicas para agente:', agentName);
+        
+        // Primero intentar con el endpoint específico (dinámico basado en frecuencia)
+        let response = await fetch(`${API_BASE}/api/suggest_department_by_agent/${encodeURIComponent(agentName.trim())}`);
+        let data = await response.json();
+        
+        // Si el endpoint no existe o da error, usar análisis local de tickets (igual que sucursal)
+        if (!response.ok || data.status === 'error') {
+          console.log('🔄 [INFO] Endpoint suggest_department_by_agent no disponible, usando análisis local de tickets');
+          
+          // Análisis local basado en tickets existentes (igual que sucursal)
+          const localSuggestions = getLocalAgentDepartmentSuggestions(agentName);
+          setAgentDepartmentSuggestions(localSuggestions);
+          setShowAgentDepartmentSuggestions(localSuggestions.length > 0);
+        } else if (data.status === 'success' && data.suggestions.length > 0) {
+          console.log('✅ [DEBUG] Sugerencias dinámicas obtenidas:', data.suggestions);
+          setAgentDepartmentSuggestions(data.suggestions);
+          setShowAgentDepartmentSuggestions(true);
+        } else {
+          setAgentDepartmentSuggestions([]);
+          setShowAgentDepartmentSuggestions(false);
+        }
+      } catch (error) {
+        console.error('Error al obtener sugerencias de departamento por agente:', error);
+        
+        // Fallback a análisis local de tickets
+        console.log('🔄 [INFO] Usando análisis local para sugerencias de departamento');
+        const localSuggestions = getLocalAgentDepartmentSuggestions(agentName);
+        setAgentDepartmentSuggestions(localSuggestions);
+        setShowAgentDepartmentSuggestions(localSuggestions.length > 0);
+      }
+    };
+
+    // Función para obtener sugerencias de departamento basadas en análisis local de tickets (igual que sucursal)
+    const getLocalAgentDepartmentSuggestions = (agentName) => {
+      console.log('🔍 [DEBUG] Analizando tickets locales para agente:', agentName);
+      
+      // Analizar tickets existentes para encontrar patrones de agente→departamento
+      const agentDepartmentCount = {};
+      
+      tickets.forEach(ticket => {
+        if (ticket.agent && ticket.agent.toLowerCase().includes(agentName.toLowerCase())) {
+          const dept = ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '');
+          if (dept && dept.trim() !== '') {
+            agentDepartmentCount[dept] = (agentDepartmentCount[dept] || 0) + 1;
+          }
+        }
+      });
+      
+      // Convertir a array de sugerencias ordenadas por frecuencia
+      const suggestions = Object.entries(agentDepartmentCount)
+        .map(([department, count]) => ({
+          department,
+          count,
+          description: `Usado ${count} vez${count > 1 ? 'es' : ''} con este agente`
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5); // Máximo 5 sugerencias
+      
+      console.log('📊 [DEBUG] Departamentos encontrados para agente:', suggestions);
+      return suggestions;
+    };
+
+    // Función para obtener sugerencias de departamento basadas en el agente (fallback final)
+    const getAgentDepartmentSuggestions = (agentName) => {
+      console.log('⚠️ [DEBUG] Usando fallback final para agente:', agentName);
+      
+      // Si no hay tickets o no hay datos, devolver sugerencias básicas
+      return [
+        { department: 'Soporte Técnico', description: 'Asistencia técnica especializada' },
+        { department: 'TI', description: 'Tecnologías de la información' },
+        { department: 'Ventas', description: 'Gestión comercial y ventas' },
+        { department: 'Atención al Cliente', description: 'Servicio al cliente' }
+      ];
+    };
+
     // Efecto para obtener sugerencias cuando cambia el usuario
     useEffect(() => {
       if (formData.user && formData.user.trim() !== '') {
@@ -2496,6 +2583,39 @@ function App() {
         setShowLocalSuggestions(false);
       }
     }, [formData.user]);
+
+    // Efecto para autoseleccionar la primera sugerencia de sucursal (igual que departamento)
+    useEffect(() => {
+      if (localBranchSuggestions.length > 0 && !formData.branch) {
+        // Autoseleccionar la primera sugerencia si no hay sucursal seleccionada
+        const firstSuggestion = localBranchSuggestions[0];
+        setFormData(prev => ({ ...prev, branch: firstSuggestion.branch }));
+        console.log('🎯 [INFO] Sucursal autoseleccionada:', firstSuggestion.branch);
+      }
+    }, [localBranchSuggestions, formData.branch]);
+
+    // Efecto para obtener sugerencias de departamento cuando cambia el agente
+    useEffect(() => {
+      if (formData.agent && formData.agent.trim() !== '') {
+        console.log('🔄 [DEBUG] Agente cambiado, obteniendo sugerencias para:', formData.agent);
+        fetchAgentDepartmentSuggestions(formData.agent);
+      } else {
+        console.log('🔄 [DEBUG] Agente vacío, limpiando sugerencias');
+        setAgentDepartmentSuggestions([]);
+        setShowAgentDepartmentSuggestions(false);
+      }
+    }, [formData.agent]);
+
+    // Efecto para autoseleccionar la primera sugerencia de departamento (igual que sucursal)
+    useEffect(() => {
+      console.log('🔍 [DEBUG] Verificando autoselección - sugerencias:', agentDepartmentSuggestions.length, 'departamento actual:', formData.department);
+      if (agentDepartmentSuggestions.length > 0 && !formData.department) {
+        // Autoseleccionar la primera sugerencia si no hay departamento seleccionado
+        const firstSuggestion = agentDepartmentSuggestions[0];
+        setFormData(prev => ({ ...prev, department: firstSuggestion.department }));
+        console.log('🎯 [INFO] Departamento autoseleccionado:', firstSuggestion.department);
+      }
+    }, [agentDepartmentSuggestions, formData.department]);
 
     // Efecto para sugerir departamento automáticamente cuando cambia usuario o agente
     useEffect(() => {
@@ -3003,6 +3123,53 @@ function App() {
                 )}
                 <option value="new">+ Agregar Nuevo...</option>
               </select>
+              
+              {/* Sugerencias inteligentes de departamento por agente */}
+              {showAgentDepartmentSuggestions && agentDepartmentSuggestions.length > 0 && (
+                <div className="department-suggestions" style={{
+                  marginTop: '8px',
+                  padding: '12px',
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem'
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: '8px', color: '#8b5cf6' }}>
+                    <i className="fas fa-user-tie"></i> Sugerencias basadas en el agente:
+                  </div>
+                  {agentDepartmentSuggestions.map((suggestion, index) => (
+                    <div 
+                      key={index}
+                      style={{
+                        padding: '6px 10px',
+                        margin: '4px 0',
+                        background: index === 0 ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: index === 0 ? '1px solid #8b5cf6' : '1px solid transparent'
+                      }}
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, department: suggestion.department }));
+                        setShowAgentDepartmentSuggestions(false);
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = index === 0 ? 'rgba(139, 92, 246, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = index === 0 ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+                      }}
+                    >
+                      <div style={{ fontWeight: 500, color: 'white' }}>
+                        {suggestion.department} {index === 0 && <span style={{ color: '#8b5cf6', fontSize: '0.8rem' }}> (Más probable)</span>}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)', marginTop: '2px' }}>
+                        {suggestion.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               
               {/* Mensaje cuando no hay departamentos */}
               {departments.length === 0 && (
