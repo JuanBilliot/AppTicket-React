@@ -1,8 +1,21 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import './App.css'
 import CustomAddModal from './CustomAddModal'
 
 const API_BASE = 'http://127.0.0.1:5002';
+
+// Función para obtener departamento asignado a un ticket (definida antes de uso)
+const getTicketDepartment = (ticketId) => {
+  try {
+    const ticketDepartments = JSON.parse(localStorage.getItem('ticket_departments') || '{}');
+    const dept = ticketDepartments[ticketId] || '';
+    console.log('🎫 [DEBUG] Departamento para ticket', ticketId, ':', `"${dept}"`);
+    return dept;
+  } catch (error) {
+    console.error('Error obteniendo departamento de ticket:', error);
+    return '';
+  }
+};
 
 // Sistema SLA Inteligente y Adaptativo
 const slaCategories = {
@@ -626,45 +639,55 @@ function App() {
   const [addModalData, setAddModalData] = useState({ name: '', type: '' });
   const [selectedTicketForModal, setSelectedTicketForModal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchTermDebounced, setSearchTermDebounced] = useState('');
 
-  // Función de filtrado para tickets
-  const filteredTickets = tickets.filter(ticket => {
-    if (!searchTerm || searchTerm.trim() === '') return true;
+  // Debounce para optimizar búsqueda (300ms de retraso)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTermDebounced(searchTerm.trim().toLowerCase());
+    }, 300);
     
-    const searchLower = searchTerm.toLowerCase().trim();
-    
-    // Buscar en número de ticket (con seguridad para null/undefined)
-    if (ticket.ticket_number != null && ticket.ticket_number.toString().includes(searchLower)) return true;
-    
-    // Buscar en usuario (con seguridad para null/undefined)
-    if (ticket.user && ticket.user.toLowerCase().includes(searchLower)) return true;
-    
-    // Buscar en sucursal (con seguridad para null/undefined)
-    if (ticket.branch && ticket.branch.toLowerCase().includes(searchLower)) return true;
-    
-    // Buscar en agente (con seguridad para null/undefined)
-    if (ticket.agent && ticket.agent.toLowerCase().includes(searchLower)) return true;
-    
-    // Buscar en colaboradores (con seguridad para null/undefined)
-    if (ticket.collaborators && ticket.collaborators.toLowerCase().includes(searchLower)) return true;
-    
-    // Buscar en departamento (con seguridad para null/undefined) - incluyendo guardados localmente
-    const ticketDept = ticket.department || getTicketDepartment(ticket.id);
-    if (ticketDept && ticketDept.toLowerCase().includes(searchLower)) return true;
-    
-    // Buscar en detalles (con seguridad para null/undefined)
-    if (ticket.details && ticket.details.toLowerCase().includes(searchLower)) return true;
-    
-    // Buscar en estado (con seguridad para null/undefined)
-    if (ticket.status && ticket.status.toLowerCase().includes(searchLower)) return true;
-    
-    return false;
-  });
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  // Resetear página cuando cambia el término de búsqueda
+  // Memoización de tickets filtrados para mejor rendimiento
+  const filteredTickets = useMemo(() => {
+    if (!searchTermDebounced) return tickets;
+    
+    return tickets.filter(ticket => {
+      // Buscar en número de ticket (con seguridad para null/undefined)
+      if (ticket.ticket_number != null && ticket.ticket_number.toString().includes(searchTermDebounced)) return true;
+      
+      // Buscar en usuario (con seguridad para null/undefined)
+      if (ticket.user && ticket.user.toLowerCase().includes(searchTermDebounced)) return true;
+      
+      // Buscar en sucursal (con seguridad para null/undefined)
+      if (ticket.branch && ticket.branch.toLowerCase().includes(searchTermDebounced)) return true;
+      
+      // Buscar en agente (con seguridad para null/undefined)
+      if (ticket.agent && ticket.agent.toLowerCase().includes(searchTermDebounced)) return true;
+      
+      // Buscar en colaboradores (con seguridad para null/undefined)
+      if (ticket.collaborators && ticket.collaborators.toLowerCase().includes(searchTermDebounced)) return true;
+      
+      // Buscar en departamento (con seguridad para null/undefined) - incluyendo guardados localmente
+      const ticketDept = ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '');
+      if (ticketDept && ticketDept.toLowerCase().includes(searchTermDebounced)) return true;
+      
+      // Buscar en detalles (con seguridad para null/undefined)
+      if (ticket.details && ticket.details.toLowerCase().includes(searchTermDebounced)) return true;
+      
+      // Buscar en estado (con seguridad para null/undefined)
+      if (ticket.status && ticket.status.toLowerCase().includes(searchTermDebounced)) return true;
+      
+      return false;
+    });
+  }, [tickets, searchTermDebounced]);
+
+  // Resetear página cuando cambia el término de búsqueda debounced
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTermDebounced]);
   const [editingServer, setEditingServer] = useState(null);
   const [newServerData, setNewServerData] = useState({
     branch: '', branch_code: '', primary_service_provider: '',
@@ -1841,19 +1864,7 @@ function App() {
     }
   };
 
-  // Función para obtener departamento asignado a un ticket
-  const getTicketDepartment = (ticketId) => {
-    try {
-      const ticketDepartments = JSON.parse(localStorage.getItem('ticket_departments') || '{}');
-      const dept = ticketDepartments[ticketId] || '';
-      console.log('🎫 [DEBUG] Departamento para ticket', ticketId, ':', `"${dept}"`);
-      return dept;
-    } catch (error) {
-      console.error('Error obteniendo departamento de ticket:', error);
-      return '';
-    }
-  };
-
+  
   const handleSaveTicket = async (updatedTicket) => {
     try {
       // Debug: Verificar qué datos se están guardando
@@ -2333,12 +2344,12 @@ function App() {
                 Departamento
               </label>
               <span style={{
-                background: (ticket.department || getTicketDepartment(ticket.id)) ? 
-                  `${getDepartmentColor(ticket.department || getTicketDepartment(ticket.id))}20` : 'rgba(107, 114, 128, 0.2)',
-                color: (ticket.department || getTicketDepartment(ticket.id)) ? 
-                  getDepartmentColor(ticket.department || getTicketDepartment(ticket.id)) : '#6b7280',
-                border: (ticket.department || getTicketDepartment(ticket.id)) ? 
-                  `2px solid ${getDepartmentColor(ticket.department || getTicketDepartment(ticket.id))}` : '2px solid rgba(107, 114, 128, 0.5)',
+                background: (ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '')) ? 
+                  `${getDepartmentColor(ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : ''))}20` : 'rgba(107, 114, 128, 0.2)',
+                color: (ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '')) ? 
+                  getDepartmentColor(ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '')) : '#6b7280',
+                border: (ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '')) ? 
+                  `2px solid ${getDepartmentColor(ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : ''))}` : '2px solid rgba(107, 114, 128, 0.5)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -2348,11 +2359,11 @@ function App() {
                 fontWeight: '600',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
-                boxShadow: (ticket.department || getTicketDepartment(ticket.id)) ? 
-                  `0 2px 4px ${getDepartmentColor(ticket.department || getTicketDepartment(ticket.id))}20` : 'none'
+                boxShadow: (ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '')) ? 
+                  `0 2px 4px ${getDepartmentColor(ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : ''))}20` : 'none'
               }}>
-                <i className={getDepartmentIcon(ticket.department || getTicketDepartment(ticket.id))} style={{ fontSize: '0.6rem' }}></i>
-                {ticket.department || getTicketDepartment(ticket.id) || 'Sin depto'}
+                <i className={getDepartmentIcon(ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : ''))} style={{ fontSize: '0.6rem' }}></i>
+                {ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '') || 'Sin depto'}
               </span>
             </div>
 
@@ -2391,7 +2402,7 @@ function App() {
     const [formData, setFormData] = useState({ 
       ...ticket,
       details: ticket.details && ticket.details !== 'Sin detalle...' ? ticket.details : '',
-      department: ticket.department || getTicketDepartment(ticket.id) || ''
+      department: ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '') || ''
     });
     const [localBranchSuggestions, setLocalBranchSuggestions] = useState([]);
     const [showLocalSuggestions, setShowLocalSuggestions] = useState(false);
@@ -6376,7 +6387,7 @@ function App() {
                       </td>
                       <td>
                         {(() => {
-                          const deptName = ticket.department || getTicketDepartment(ticket.id);
+                          const deptName = ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '');
                           const deptColor = getDepartmentColor(deptName);
                           console.log('🏷️ [TABLE DEBUG] Ticket:', ticket.ticket_number, 'Departamento:', `"${deptName}"`, 'Color:', deptColor);
                           return (
