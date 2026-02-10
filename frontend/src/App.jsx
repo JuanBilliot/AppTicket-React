@@ -813,6 +813,8 @@ function App() {
     setSettingsLoading(true);
     setSettingsError('');
     try {
+      console.log('🔄 [DEBUG] Cargando configuración completa...');
+      
       const [uR, bR, aR] = await Promise.all([
         fetch(`${API_BASE}/api/settings/users?all=1`),
         fetch(`${API_BASE}/api/settings/branches?all=1`),
@@ -821,24 +823,46 @@ function App() {
 
       const [uJ, bJ, aJ] = await Promise.all([uR.json(), bR.json(), aR.json()]);
 
+      console.log('📊 [DEBUG] Respuestas API:', { users: uJ, branches: bJ, agents: aJ });
+
       if (!uR.ok) throw new Error(uJ?.message || 'Error cargando usuarios');
       if (!bR.ok) throw new Error(bJ?.message || 'Error cargando sucursales');
       if (!aR.ok) throw new Error(aJ?.message || 'Error cargando agentes');
 
-      setSettingsUsers(Array.isArray(uJ) ? uJ : []);
-      setSettingsBranches(Array.isArray(bJ) ? bJ : []);
-      setSettingsAgents(Array.isArray(aJ) ? aJ : []);
+      const usersArray = Array.isArray(uJ) ? uJ.map(u => typeof u === 'object' ? u.name : u) : [];
+      const branchesArray = Array.isArray(bJ) ? bJ.map(b => typeof b === 'object' ? b.name : b) : [];
+      const agentsArray = Array.isArray(aJ) ? aJ.map(a => typeof a === 'object' ? a.name : a) : [];
+
+      console.log('✅ [DEBUG] Arrays procesados:', { 
+        users: usersArray.length, 
+        branches: branchesArray.length, 
+        agents: agentsArray.length 
+      });
+      console.log('📝 [DEBUG] Usuarios procesados:', usersArray);
+
+      // Actualizar AMBOS estados: settings y formulario
+      setSettingsUsers(usersArray);
+      setSettingsBranches(branchesArray);
+      setSettingsAgents(agentsArray);
+      
+      // ¡IMPORTANTE! También actualizar los estados del formulario
+      setUsers(usersArray);
+      setBranches(branchesArray);
+      setAgents(agentsArray);
       
       // Cargar departamentos desde localStorage
       const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
       setSettingsDepartments(savedDepartments);
+      setDepartments(savedDepartments);
       
       // Cargar departamentos ocultos
       const hidden = JSON.parse(localStorage.getItem('hidden_departments') || '[]');
       setHiddenDepartments(hidden);
+      
+      console.log('✅ [SUCCESS] Configuración cargada completamente');
     } catch (e) {
       setSettingsError('No se pudo cargar Configuración');
-      console.error(e);
+      console.error('❌ [ERROR] Error en fetchSettingsAll:', e);
     } finally {
       setSettingsLoading(false);
     }
@@ -7096,24 +7120,39 @@ function App() {
               setSettingsLoading(true);
               setSettingsError('');
               
+              console.log(`🔄 [DEBUG] Enviando ${type} a API:`, name);
+              console.log(`🔗 [DEBUG] URL completa: ${API_BASE}/api/settings/${type}`);
+              
               const resp = await fetch(`${API_BASE}/api/settings/${type}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name })
               });
               
+              console.log(`📡 [DEBUG] Status HTTP:`, resp.status, resp.statusText);
+              
               const data = await resp.json();
+              console.log(`📊 [DEBUG] Respuesta API para ${type}:`, data);
               
               if (!resp.ok || data.status === 'error') {
+                console.error(`❌ [ERROR] Error agregando ${type}:`, data);
                 setSettingsError(data.message || `Error al agregar ${type}`);
                 return;
               }
               
+              console.log(`✅ [SUCCESS] ${type} agregado correctamente, actualizando estados...`);
+              
+              // Pequeña pausa para asegurar que el backend procese
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              console.log(`🔄 [DEBUG] Ejecutando fetchSettingsAll...`);
               await fetchSettingsAll();
+              console.log(`🔄 [DEBUG] Ejecutando fetchGroups...`);
               await fetchGroups();
               
               // Actualizar el formulario si estamos en edición de ticket
               if (viewMode === 'edit' && selectedTicket) {
+                console.log(`🎯 [DEBUG] Actualizando formulario de ticket con ${type}:`, name);
                 setFormData(prev => ({ ...prev, [type]: name }));
               }
               
@@ -7129,7 +7168,7 @@ function App() {
               }, 3000);
               
             } catch (e) {
-              console.error('Error adding item:', e);
+              console.error(`❌ [ERROR] Excepción agregando ${type}:`, e);
               setSettingsError(`Error al agregar ${type}`);
             } finally {
               setSettingsLoading(false);

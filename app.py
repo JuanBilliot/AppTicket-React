@@ -165,7 +165,13 @@ def ping(host, timeout=10):
         return None, 'error'
 
 app = Flask(__name__)
-CORS(app) # Habilitar CORS para todas las rutas
+# Configuración CORS más permisiva para resolver el problema
+CORS(app, 
+    origins='*',
+    methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allow_headers='*',
+    supports_credentials=False
+)
 app.secret_key = 'tu_clave_secreta_segura_y_unica_para_sesiones_2024'  # Clave secreta para sesiones
 
 # Inicializar SSE
@@ -1072,6 +1078,7 @@ def api_get_branches():
     return jsonify(all_branches)
 
 @app.route('/api/settings/users', methods=['GET', 'POST'])
+@app.route('/api/settings/user', methods=['GET', 'POST'])
 def api_settings_users():
     conn = get_db()
     c = conn.cursor()
