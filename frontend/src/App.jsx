@@ -753,13 +753,14 @@ function App() {
   useEffect(() => {
     fetchData();
     fetchGroups();
-    fetchBranches();
     fetchDepartments();
     const interval = setInterval(() => {
       if (viewMode !== 'edit') {
         fetchData();
+        fetchGroups();
+        fetchDepartments();
       }
-    }, 60000);
+    }, 30000); // 30 segundos
     return () => clearInterval(interval);
   }, [viewMode]);
 
@@ -803,9 +804,34 @@ function App() {
         fetch(`${API_BASE}/api/users`),
         fetch(`${API_BASE}/api/branches`)
       ]);
-      setAgents(await aR.json());
-      setUsers(await uR.json());
-      setBranches(await bR.json());
+      
+      const agentsData = await aR.json();
+      const usersData = await uR.json();
+      const branchesData = await bR.json();
+      
+      console.log('🏢 [DEBUG] fetchGroups - Datos brutos de branches:', branchesData);
+      
+      // Filtrar solo servidores con formato "ServerTRxx" o "ServerRDxx" de las sucursales
+      // Preservar "server" en nombres legítimos como "ServerCenter" o "Sistemas"
+      const filteredBranches = branchesData.filter(branch => {
+        const branchStr = String(branch).toLowerCase();
+        
+        // Patrón específico: ServerTR + números o ServerRD + números
+        const isServerTR_RD = /^server(tr|rd)\d+$/i.test(branchStr);
+        
+        if (isServerTR_RD) {
+          console.log('🚫 [FILTER] Filtrando servidor TR/RD de branches:', branch);
+        }
+        
+        return !isServerTR_RD;
+      });
+      
+      console.log('✅ [DEBUG] fetchGroups - Branches filtrados:', filteredBranches);
+      console.log('🗑️ [DEBUG] fetchGroups - Servidores filtrados:', branchesData.length - filteredBranches.length);
+      
+      setAgents(agentsData);
+      setUsers(usersData);
+      setBranches(filteredBranches);
     } catch (e) { console.error(e); }
   };
 
@@ -829,31 +855,60 @@ function App() {
       if (!bR.ok) throw new Error(bJ?.message || 'Error cargando sucursales');
       if (!aR.ok) throw new Error(aJ?.message || 'Error cargando agentes');
 
+      // Para settings, mantener objetos completos con id, name, active
+      const settingsUsersArray = Array.isArray(uJ) ? uJ : [];
+      const settingsBranchesArray = Array.isArray(bJ) ? bJ : [];
+      const settingsAgentsArray = Array.isArray(aJ) ? aJ : [];
+
+      // Para el formulario, extraer solo los nombres
       const usersArray = Array.isArray(uJ) ? uJ.map(u => typeof u === 'object' ? u.name : u) : [];
-      const branchesArray = Array.isArray(bJ) ? bJ.map(b => typeof b === 'object' ? b.name : b) : [];
+      const branchesArrayRaw = Array.isArray(bJ) ? bJ.map(b => typeof b === 'object' ? b.name : b) : [];
       const agentsArray = Array.isArray(aJ) ? aJ.map(a => typeof a === 'object' ? a.name : a) : [];
+
+      // Filtrar solo servidores con formato "ServerTRxx" o "ServerRDxx" de las sucursales en settings
+      // Preservar "server" en nombres legítimos como "ServerCenter" o "Sistemas"
+      const branchesArray = branchesArrayRaw.filter(branch => {
+        const branchStr = String(branch).toLowerCase();
+        
+        // Patrón específico: ServerTR + números o ServerRD + números
+        const isServerTR_RD = /^server(tr|rd)\d+$/i.test(branchStr);
+        
+        if (isServerTR_RD) {
+          console.log('🚫 [SETTINGS FILTER] Filtrando servidor TR/RD de settings branches:', branch);
+        }
+        
+        return !isServerTR_RD;
+      });
 
       console.log('✅ [DEBUG] Arrays procesados:', { 
         users: usersArray.length, 
         branches: branchesArray.length, 
         agents: agentsArray.length 
       });
+      console.log('🏢 [DEBUG] Datos brutos de branches (bJ):', bJ);
+      console.log('🏢 [DEBUG] Array procesado de branches (raw):', branchesArrayRaw);
+      console.log('🏢 [DEBUG] Array filtrado de branches (final):', branchesArray);
+      console.log('🗑️ [DEBUG] Servidores filtrados en settings:', branchesArrayRaw.length - branchesArray.length);
       console.log('📝 [DEBUG] Usuarios procesados:', usersArray);
+      console.log('⚙️ [DEBUG] Settings usuarios (objetos):', settingsUsersArray);
 
-      // Actualizar AMBOS estados: settings y formulario
-      setSettingsUsers(usersArray);
-      setSettingsBranches(branchesArray);
-      setSettingsAgents(agentsArray);
+      // Actualizar estados de settings con objetos completos
+      setSettingsUsers(settingsUsersArray);
+      setSettingsBranches(settingsBranchesArray);
+      setSettingsAgents(settingsAgentsArray);
       
-      // ¡IMPORTANTE! También actualizar los estados del formulario
+      // Actualizar estados del formulario con solo nombres
       setUsers(usersArray);
       setBranches(branchesArray);
       setAgents(agentsArray);
       
-      // Cargar departamentos desde localStorage
+      // Cargar departamentos desde localStorage (asegurar que sean strings)
       const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
-      setSettingsDepartments(savedDepartments);
-      setDepartments(savedDepartments);
+      const departmentsArray = Array.isArray(savedDepartments) ? 
+        savedDepartments.map(dept => typeof dept === 'object' ? (dept.name || String(dept)) : String(dept)) : 
+        [];
+      setSettingsDepartments(departmentsArray);
+      setDepartments(departmentsArray);
       
       // Cargar departamentos ocultos
       const hidden = JSON.parse(localStorage.getItem('hidden_departments') || '[]');
@@ -1428,15 +1483,25 @@ function App() {
     }
   };
 
-  const fetchBranches = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/branches`);
-      const data = await response.json();
-      setBranches(data.branches || []);
-    } catch (error) {
-      console.error('Error fetching branches:', error);
-    }
-  };
+  // FUNCIÓN COMENTADA - Ya no se usa para evitar mezcla de datos
+// El problema era que fetchBranches() sobreescribía los datos correctos de fetchGroups()
+// const fetchBranches = async () => {
+//   try {
+//     const response = await fetch(`${API_BASE}/api/branches`);
+//     const data = await response.json();
+//     console.log('🏢 [DEBUG] fetchBranches - Datos recibidos:', data);
+//     console.log('🏢 [DEBUG] fetchBranches - Tipo de dato:', typeof data);
+//     console.log('🏢 [DEBUG] fetchBranches - ¿Es array?', Array.isArray(data));
+//     
+//     // La API /api/branches devuelve un array directamente, no un objeto con propiedad 'branches'
+//     const branchesData = Array.isArray(data) ? data : (data.branches || []);
+//     console.log('🏢 [DEBUG] fetchBranches - Datos procesados:', branchesData);
+//     
+//     setBranches(branchesData);
+//   } catch (error) {
+//     console.error('Error fetching branches:', error);
+//   }
+// };
 
   // Función para asignar íconos únicos a departamentos
   const getDepartmentIcon = (departmentName) => {
@@ -1963,7 +2028,7 @@ function App() {
   };
 
   const handleDeleteServer = async (id) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar esta sucursal?')) return;
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este servidor?')) return;
     try {
       const resp = await fetch(`${API_BASE}/api/servers/${id}`, {
         method: 'DELETE'
@@ -2428,6 +2493,14 @@ function App() {
       details: ticket.details && ticket.details !== 'Sin detalle...' ? ticket.details : '',
       department: ticket.department || (ticket.id ? getTicketDepartment(ticket.id) : '') || ''
     });
+
+    // Efecto para limpiar automáticamente el campo details si solo contiene "Sin detalle..."
+    useEffect(() => {
+      if (formData.details === 'Sin detalle...' || formData.details === 'Sin detalles') {
+        console.log('🧹 [AUTO-CLEAN] Limpiando campo details - contiene solo texto por defecto');
+        setFormData(prev => ({ ...prev, details: '' }));
+      }
+    }, []); // Solo ejecutar al montar el componente
     const [localBranchSuggestions, setLocalBranchSuggestions] = useState([]);
     const [showLocalSuggestions, setShowLocalSuggestions] = useState(false);
     const [agentDepartmentSuggestions, setAgentDepartmentSuggestions] = useState([]);
@@ -3031,7 +3104,11 @@ function App() {
                 e.target.style.boxShadow = 'none';
               }}>
                 <option value="">-- Seleccionar Sucursal --</option>
-                {branches.map(b => <option key={b} value={b}>{b}</option>)}
+                {console.log('🏢 [DEBUG] TicketEdit - Contenido de branches:', branches) || 
+                 console.log('🏢 [DEBUG] TicketEdit - ¿Hay TR/RD en branches?', branches.some(b => 
+                   typeof b === 'string' && (b.toLowerCase().includes('tr') || b.toLowerCase().includes('rd') || b.toLowerCase().includes('server'))
+                 )) ||
+                 branches.map(b => <option key={b} value={b}>{b}</option>)}
                 {formData.branch && !branches.includes(formData.branch) && <option value={formData.branch}>{formData.branch}</option>}
                 <option value="new">+ Agregar Nuevo...</option>
               </select>
@@ -5830,14 +5907,24 @@ function App() {
       if (settingsTab === 'users') return settingsUsers;
       if (settingsTab === 'branches') return settingsBranches;
       if (settingsTab === 'agents') return settingsAgents;
-      return settingsDepartments;
+      // Para departamentos, asegurar que siempre sea un array de strings
+      return Array.isArray(settingsDepartments) ? 
+        settingsDepartments.map(dept => typeof dept === 'object' ? (dept.name || String(dept)) : String(dept)) : 
+        [];
     };
 
     const setList = (next) => {
       if (settingsTab === 'users') setSettingsUsers(next);
       else if (settingsTab === 'branches') setSettingsBranches(next);
       else if (settingsTab === 'agents') setSettingsAgents(next);
-      else setSettingsDepartments(next);
+      else {
+        // Para departamentos, asegurar que siempre sea un array de strings
+        const departmentsArray = Array.isArray(next) ? 
+          next.map(dept => typeof dept === 'object' ? (dept.name || String(dept)) : String(dept)) : 
+          [];
+        setSettingsDepartments(departmentsArray);
+        setDepartments(departmentsArray);
+      }
     };
 
     const addItem = async () => {
@@ -5850,20 +5937,22 @@ function App() {
       if (settingsTab === 'departments') {
         try {
           const savedDepartments = JSON.parse(localStorage.getItem('local_departments') || '[]');
-          if (savedDepartments.includes(name)) {
+          const departmentsArray = Array.isArray(savedDepartments) ? 
+            savedDepartments.map(dept => typeof dept === 'object' ? (dept.name || String(dept)) : String(dept)) : 
+            [];
+          
+          if (departmentsArray.includes(name)) {
             setSettingsError('El departamento ya existe');
             return;
           }
-          savedDepartments.push(name);
-          localStorage.setItem('local_departments', JSON.stringify(savedDepartments));
-          setSettingsDepartments(savedDepartments);
+          const updatedDepartments = [...departmentsArray, name];
+          localStorage.setItem('local_departments', JSON.stringify(updatedDepartments));
+          setSettingsDepartments(updatedDepartments);
+          setDepartments(updatedDepartments);
           setSettingsNewName('');
           
-          // También actualizar el estado global departments para que aparezca en el desplegable
-          setDepartments(savedDepartments);
-          
           console.log('➕ [DEBUG] Departamento agregado:', name);
-          console.log('🔄 [DEBUG] Estado global departments actualizado:', savedDepartments);
+          console.log('🔄 [DEBUG] Estado global departments actualizado:', updatedDepartments);
         } catch (e) {
           setSettingsError('Error al guardar departamento');
           console.error('Error guardando departamento:', e);
@@ -5875,6 +5964,17 @@ function App() {
       
       // Para usuarios, sucursales y agentes (API)
       try {
+        // Verificar duplicados antes de enviar
+        const currentList = getList();
+        const exists = currentList.some(item => 
+          (typeof item === 'object' ? item.name : item) === name
+        );
+        
+        if (exists) {
+          setSettingsError(`El ${settingsTab === 'users' ? 'usuario' : settingsTab === 'branches' ? 'sucursal' : 'agente'} ya existe`);
+          return;
+        }
+        
         const resp = await fetch(`${API_BASE}/api/settings/${settingsTab}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5899,23 +5999,35 @@ function App() {
     
     const toggleActive = async (item) => {
       const nextActive = !item.active;
+      console.log(`🔄 [DEBUG] Toggle ${settingsTab} ID:${item.id} de ${item.active} a ${nextActive}`);
       setSettingsLoading(true);
       setSettingsError('');
       try {
-        const resp = await fetch(`${API_BASE}/api/settings/${settingsTab}/${item.id}`, {
+        const url = `${API_BASE}/api/settings/${settingsTab}/${item.id}`;
+        console.log(`🔗 [DEBUG] URL: ${url}`);
+        console.log(`📤 [DEBUG] Body: ${JSON.stringify({ active: nextActive })}`);
+        
+        const resp = await fetch(url, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ active: nextActive })
         });
+        
+        console.log(`📡 [DEBUG] Status: ${resp.status}`);
         const data = await resp.json();
+        console.log(`📊 [DEBUG] Response:`, data);
+        
         if (!resp.ok || data.status === 'error') {
+          console.error(`❌ [ERROR] ${data.message || 'Error al actualizar'}`);
           setSettingsError(data.message || 'Error al actualizar');
           return;
         }
+        
+        console.log(`✅ [SUCCESS] ${settingsTab} actualizado`);
         setList(getList().map(x => x.id === item.id ? { ...x, active: nextActive } : x));
         await fetchGroups();
       } catch (e) {
-        console.error('Error en settings:', e);
+        console.error('❌ [ERROR] Error en settings:', e);
         setSettingsError('Error al cargar configuración');
       } finally {
         setSettingsLoading(false);
@@ -5923,7 +6035,9 @@ function App() {
     };
 
     const renameItem = async (item) => {
-      const currentName = settingsTab === 'departments' ? item : item.name;
+      const currentName = settingsTab === 'departments' ? 
+        String(item) : 
+        (item && typeof item === 'object' && item.name ? String(item.name) : 'Sin nombre');
       // Para renombrar, usamos el mismo modal personalizado
       setAddModalType('rename');
       setAddModalData({ name: currentName, type: '', originalItem: item });
@@ -5976,10 +6090,12 @@ function App() {
     };
 
     const deleteItem = async (item) => {
-      const itemName = settingsTab === 'departments' ? item : (item.name || item);
-      const isHidden = settingsTab === 'departments' && hiddenDepartments.includes(item);
+      const itemName = settingsTab === 'departments' ? 
+        String(item) : 
+        (item && typeof item === 'object' && item.name ? String(item.name) : 'Sin nombre');
+      const isHidden = settingsTab === 'departments' && hiddenDepartments.includes(itemName);
       
-      if (!confirm(`¿Estás seguro de que quieres ${isHidden ? 'hacer VISIBLE' : isHidden ? 'eliminar permanentemente' : 'hacer NO VISIBLE'} "${itemName}"? ${isHidden ? 'Volverá a aparecer en la lista de selección.' : 'Ya no aparecerá en la lista de selección.'}`)) {
+      if (!confirm(`¿Estás seguro de que quieres ${isHidden ? 'hacer VISIBLE' : isHidden ? 'eliminar permanentemente' : 'hacer NO VISIBLE'} "${String(itemName)}"? ${isHidden ? 'Volverá a aparecer en la lista de selección.' : 'Ya no aparecerá en la lista de selección.'}`)) {
         return;
       }
       
@@ -5992,18 +6108,18 @@ function App() {
           if (isHidden) {
             // Restaurar: quitar de la lista de ocultos
             let currentHidden = JSON.parse(localStorage.getItem('hidden_departments') || '[]');
-            currentHidden = currentHidden.filter(dept => dept !== item);
+            currentHidden = currentHidden.filter(dept => dept !== itemName);
             localStorage.setItem('hidden_departments', JSON.stringify(currentHidden));
             setHiddenDepartments(currentHidden);
-            console.log('👁️ [DEBUG] Departamento hecho VISIBLE:', item);
+            console.log('👁️ [DEBUG] Departamento hecho VISIBLE:', itemName);
           } else {
             // Ocultar: agregar a la lista de ocultos
             let currentHidden = JSON.parse(localStorage.getItem('hidden_departments') || '[]');
-            if (!currentHidden.includes(item)) {
-              currentHidden.push(item);
+            if (!currentHidden.includes(itemName)) {
+              currentHidden.push(itemName);
               localStorage.setItem('hidden_departments', JSON.stringify(currentHidden));
               setHiddenDepartments(currentHidden);
-              console.log('👁️‍🗨️ [DEBUG] Departamento hecho NO VISIBLE:', item);
+              console.log('👁️‍🗨️ [DEBUG] Departamento hecho NO VISIBLE:', itemName);
             }
           }
           
@@ -6099,78 +6215,278 @@ function App() {
           </button>
         </div>
 
-        <div className="table-container">
-          <table className="custom-table">
+        <div className="table-container" style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            borderRadius: '16px',
+            border: '1px solid var(--glass-border)',
+            overflow: 'hidden',
+            backdropFilter: 'blur(10px)'
+          }}>
+          <table className="custom-table" style={{ 
+            width: '100%',
+            borderCollapse: 'collapse',
+            background: 'transparent'
+          }}>
             <thead>
-              <tr>
-                <th>Nombre</th>
-                {settingsTab !== 'departments' && <th>Estado</th>}
-                <th>Acciones</th>
+              <tr style={{ 
+                background: 'rgba(59, 130, 246, 0.1)',
+                borderBottom: '2px solid var(--primary)'
+              }}>
+                <th style={{ 
+                  padding: '1rem 1.25rem',
+                  fontWeight: '700',
+                  color: 'var(--primary)',
+                  fontSize: '0.9rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  textAlign: 'left'
+                }}>Nombre</th>
+                {settingsTab !== 'departments' && (
+                  <th style={{ 
+                    padding: '1rem 1.25rem',
+                    fontWeight: '700',
+                    color: 'var(--primary)',
+                    fontSize: '0.9rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    textAlign: 'center',
+                    width: '120px'
+                  }}>Estado</th>
+                )}
+                <th style={{ 
+                  padding: '1rem 1.25rem',
+                  fontWeight: '700',
+                  color: 'var(--primary)',
+                  fontSize: '0.9rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  textAlign: 'center',
+                  width: '200px'
+                }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {settingsLoading && list.length === 0 ? (
-                <tr><td colSpan={settingsTab === 'departments' ? 2 : 3} style={{ padding: '1.5rem' }}>Cargando...</td></tr>
+                <tr>
+                  <td colSpan={settingsTab === 'departments' ? 2 : 3} style={{ 
+                    padding: '3rem',
+                    textAlign: 'center',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.95rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <i className="fas fa-circle-notch fa-spin"></i>
+                      Cargando datos...
+                    </div>
+                  </td>
+                </tr>
+              ) : list.length === 0 ? (
+                <tr>
+                  <td colSpan={settingsTab === 'departments' ? 2 : 3} style={{ 
+                    padding: '3rem',
+                    textAlign: 'center',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.95rem'
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                      <i className="fas fa-inbox" style={{ fontSize: '2rem', opacity: 0.5 }}></i>
+                      <div>No hay {settingsTab === 'users' ? 'usuarios' : settingsTab === 'branches' ? 'sucursales' : settingsTab === 'agents' ? 'agentes' : 'departamentos'} registrados</div>
+                      <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>Agrega el primer elemento usando el formulario superior</div>
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 list.map((item, index) => {
                   // Para departamentos, item es un string, para otros es un objeto
-                  const itemName = settingsTab === 'departments' ? item : item.name;
+                  const itemName = settingsTab === 'departments' ? 
+                    String(item) : 
+                    (item && typeof item === 'object' && item.name ? String(item.name) : 'Sin nombre');
                   const itemId = settingsTab === 'departments' ? index : item.id;
                   const isActive = settingsTab === 'departments' ? true : item.active;
                   
                   // Verificar si el departamento está oculto (solo para departamentos)
-                  const isHidden = settingsTab === 'departments' && hiddenDepartments.includes(item);
+                  const isHidden = settingsTab === 'departments' && hiddenDepartments.includes(itemName);
                   
                   return (
                     <tr key={itemId} style={{ 
-                      opacity: isActive ? 1 : 0.55,
-                      backgroundColor: isHidden ? 'rgba(239, 68, 68, 0.1)' : 'transparent'
+                      opacity: isActive ? 1 : 0.4,
+                      backgroundColor: isHidden ? 'rgba(239, 68, 68, 0.05)' : 'transparent',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                      transition: 'all 0.2s ease'
                     }}>
                       <td style={{ 
-                        fontWeight: 700,
-                        textDecoration: isHidden ? 'line-through' : 'none',
-                        color: isHidden ? '#ef4444' : 'inherit'
+                        padding: '1rem 1.25rem',
+                        fontWeight: '600',
+                        color: isActive ? 'white' : 'var(--text-muted)',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem'
                       }}>
-                        {String(itemName)}
-                        {isHidden && <span style={{ marginLeft: '8px', fontSize: '0.8em', color: '#ef4444' }}>(NO VISIBLE)</span>}
+                        {/* Icono según el tipo */}
+                        <span style={{
+                          fontSize: '1rem',
+                          width: '24px',
+                          textAlign: 'center',
+                          color: settingsTab === 'users' ? '#3b82f6' :
+                                 settingsTab === 'branches' ? '#10b981' :
+                                 settingsTab === 'agents' ? '#f59e0b' : '#8b5cf6'
+                        }}>
+                          {settingsTab === 'users' ? '👤' :
+                           settingsTab === 'branches' ? '🏢' :
+                           settingsTab === 'agents' ? '🤝' : '📁'}
+                        </span>
+                        <span>{String(itemName || 'Sin nombre')}</span>
+                        {isHidden && (
+                          <span style={{
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            color: '#ef4444',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '500'
+                          }}>Oculto</span>
+                        )}
                       </td>
                       {settingsTab !== 'departments' && (
-                        <td>
-                          <span className={`badge ${isActive ? 'status-abierto' : 'status-cerrado'}`}>{isActive ? 'Activo' : 'Inactivo'}</span>
+                        <td style={{ 
+                          padding: '1rem 1.25rem',
+                          textAlign: 'center'
+                        }}>
+                          <span style={{
+                            background: isActive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                            color: isActive ? '#10b981' : '#ef4444',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '0.8rem',
+                            fontWeight: '600',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              background: isActive ? '#10b981' : '#ef4444'
+                            }}></span>
+                            {isActive ? 'Activo' : 'Inactivo'}
+                          </span>
                         </td>
                       )}
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {settingsTab === 'departments' && (
-                            <button className="action-btn edit" title="Renombrar" onClick={() => renameItem(item)}><i className="fas fa-i-cursor"></i></button>
-                          )}
-                          {settingsTab !== 'departments' && (
-                            <button className="action-btn edit" title="Renombrar" onClick={() => renameItem(item)}><i className="fas fa-i-cursor"></i></button>
-                          )}
+                      <td style={{ 
+                        padding: '1rem 1.25rem',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '4px', 
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          flexWrap: 'nowrap'
+                        }}>
+                          {/* Botón de renombrar - compacto */}
+                          <button 
+                            className="action-btn edit" 
+                            title="Renombrar" 
+                            onClick={() => renameItem(item)}
+                            style={{
+                              background: 'rgba(59, 130, 246, 0.1)',
+                              border: '1px solid #3b82f6',
+                              color: '#3b82f6',
+                              borderRadius: '6px',
+                              padding: '6px 8px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '32px',
+                              height: '32px',
+                              fontSize: '0.8rem'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                              e.currentTarget.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                          >
+                            <i className="fas fa-i-cursor"></i>
+                          </button>
+                          
+                          {/* Botón de activar/desactivar - compacto */}
                           {settingsTab !== 'departments' && (
                             <button
                               className={`action-btn ${isActive ? 'delete' : 'view'}`}
                               title={isActive ? 'Desactivar' : 'Activar'}
                               onClick={() => toggleActive(item)}
+                              style={{
+                                background: isActive ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                border: isActive ? '1px solid #ef4444' : '1px solid #10b981',
+                                color: isActive ? '#ef4444' : '#10b981',
+                                borderRadius: '6px',
+                                padding: '6px 8px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '32px',
+                                height: '32px',
+                                fontSize: '0.8rem'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = isActive ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)';
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = isActive ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
                             >
                               <i className={`fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}`}></i>
                             </button>
                           )}
+                          
+                          {/* Botón de ocultar/mostrar o eliminar - compacto */}
                           <button
                             className={`action-btn ${isHidden ? 'view' : 'delete'}`}
-                            title={isHidden ? 'Hacer Visible' : 'Hacer NO VISIBLE'}
+                            title={isHidden ? 'Hacer Visible' : settingsTab === 'departments' ? 'Hacer NO VISIBLE' : 'Eliminar'}
                             onClick={() => deleteItem(item)}
+                            style={{
+                              background: isHidden ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              border: isHidden ? '1px solid #10b981' : '1px solid #ef4444',
+                              color: isHidden ? '#10b981' : '#ef4444',
+                              borderRadius: '6px',
+                              padding: '6px 8px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '32px',
+                              height: '32px',
+                              fontSize: '0.8rem'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = isHidden ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+                              e.currentTarget.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = isHidden ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
                           >
-                            <i className={`fas ${isHidden ? 'fa-eye' : 'fa-eye-slash'}`}></i>
+                            <i className={`fas ${isHidden ? 'fa-eye' : settingsTab === 'departments' ? 'fa-eye-slash' : 'fa-trash'}`}></i>
                           </button>
                         </div>
                       </td>
                     </tr>
                   );
                 })
-              )}
-              {!settingsLoading && list.length === 0 && (
-                <tr><td colSpan={settingsTab === 'departments' ? 2 : 3} style={{ padding: '1.5rem' }}>Sin registros.</td></tr>
               )}
             </tbody>
           </table>
@@ -7037,32 +7353,101 @@ function App() {
               </button>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {notifications.map(notification => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {notifications.map((notification, index) => (
                 <div
                   key={notification.id}
                   style={{
                     background: notification.type === 'success' ? 'rgba(16, 185, 129, 0.1)' :
-                                 notification.type === 'error' ? 'rgba(239, 68, 68, 0.1)' :
+                                 notification.type === 'error' ? 'rgba(239, 68, 68, 0.15)' :
                                  notification.type === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)',
                     border: `1px solid ${
                       notification.type === 'success' ? '#10b981' :
                       notification.type === 'error' ? '#ef4444' :
                       notification.type === 'warning' ? '#f59e0b' : '#3b82f6'
                     }`,
-                    borderRadius: '8px',
-                    padding: '12px',
-                    color: 'white'
+                    borderRadius: '10px',
+                    padding: '10px 12px',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateX(4px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateX(0)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '0.9rem' }}>
-                    {notification.title}
+                  {/* Número de notificación */}
+                  <div style={{
+                    background: notification.type === 'success' ? '#10b981' :
+                                 notification.type === 'error' ? '#ef4444' :
+                                 notification.type === 'warning' ? '#f59e0b' : '#3b82f6',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.7rem',
+                    fontWeight: 'bold',
+                    flexShrink: 0
+                  }}>
+                    {index + 1}
                   </div>
-                  <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                    {notification.message}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.7, marginTop: '8px' }}>
-                    {new Date(notification.timestamp).toLocaleTimeString('es-AR')}
+                  
+                  {/* Icono y contenido */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ 
+                      fontWeight: '600', 
+                      marginBottom: '2px', 
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      {/* Icono específico según el tipo y título */}
+                      <span style={{ fontSize: '0.9rem' }}>
+                        {notification.title.includes('Nuevo Ticket') ? '🎫' :
+                         notification.title.includes('Servidor Caído') ? '🔴' :
+                         notification.title.includes('Servidor Recuperado') ? '🟢' :
+                         notification.type === 'success' ? '✅' :
+                         notification.type === 'error' ? '❌' :
+                         notification.type === 'warning' ? '⚠️' : '📢'}
+                      </span>
+                      <span style={{ 
+                        color: notification.type === 'error' ? '#fca5a5' :
+                               notification.type === 'success' ? '#86efac' :
+                               notification.type === 'warning' ? '#fcd34d' : 'white'
+                      }}>
+                        {notification.title}
+                      </span>
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.75rem', 
+                      opacity: 0.9,
+                      lineHeight: '1.3'
+                    }}>
+                      {notification.message}
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.65rem', 
+                      opacity: 0.6, 
+                      marginTop: '4px',
+                      fontStyle: 'italic'
+                    }}>
+                      {new Date(notification.timestamp).toLocaleTimeString('es-AR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -7221,7 +7606,8 @@ function App() {
               // Mostrar confirmación
               const notification = document.createElement('div');
               notification.className = 'modal-success';
-              notification.innerHTML = `<i class="fas fa-check-circle"></i> ${settingsTab === 'users' ? 'Usuario' : settingsTab === 'agents' ? 'Agente' : 'Sucursal'} renombrado de "${item.name}" a "${newName}" correctamente`;
+              const oldName = item && typeof item === 'object' && item.name ? String(item.name) : 'Sin nombre';
+              notification.innerHTML = `<i class="fas fa-check-circle"></i> ${settingsTab === 'users' ? 'Usuario' : settingsTab === 'agents' ? 'Agente' : 'Sucursal'} renombrado de "${oldName}" a "${newName}" correctamente`;
               document.body.appendChild(notification);
               setTimeout(() => {
                 if (notification.parentNode) {
